@@ -31,4 +31,3 @@ FEISHU_CONFIG = {
     }
 }
 
-print(FEISHU_CONFIG)
