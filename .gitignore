@@ -3,3 +3,5 @@ venv/
 env/
 .env/
 .env
+myenv/
+myenv
