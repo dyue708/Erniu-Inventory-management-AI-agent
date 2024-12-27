@@ -10,7 +10,7 @@
    - Windows: `venv\Scripts\activate`
    - Linux/Mac: `source venv/bin/activate`
 4. 安装依赖：`pip install -r requirements.txt`
-5. 配置 `.env` 文件
+5. 配置 `.env` 文件 按照 `.env sample` 文件配置后 修改名称 为 `.env`
 
 ## 使用
 

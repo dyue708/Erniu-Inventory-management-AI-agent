@@ -1,0 +1,18 @@
+# 飞书应用凭证
+FEISHU_APP_ID=your_app_id_here                # 在飞书开放平台获取的应用ID
+FEISHU_APP_SECRET=your_app_secret_here        # 在飞书开放平台获取的应用密钥
+FEISHU_SHEET_TOKEN=your_sheet_token_here      # 飞书多维表格的访问令牌
+
+# 仓库管理相关表格配置
+## 仓库管理表 - 用于存储仓库基本信息
+WAREHOUSE_SHEET_ID=your_warehouse_sheet_id     # 仓库管理表的sheet ID
+
+# 商品相关表格配置
+## 商品管理表 - 用于存储商品基本信息
+PRODUCT_SHEET_ID=your_product_sheet_id        # 商品管理表的sheet ID
+
+## 商品分类管理表 - 用于存储商品分类信息
+CATEGORY_SHEET_ID=your_category_sheet_id      # 商品分类表的sheet ID
+
+## 库存明细表 - 用于记录库存变动明细
+INVENTORY_SHEET_ID=your_inventory_sheet_id    # 库存明细表的sheet ID
