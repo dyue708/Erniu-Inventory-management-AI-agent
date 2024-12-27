@@ -10,6 +10,9 @@ FEISHU_CONFIG = {
     "APP_ID": os.getenv("FEISHU_APP_ID"),
     "APP_SECRET": os.getenv("FEISHU_APP_SECRET"),
     
+    # 机器人配置
+    "VERIFICATION_TOKEN": os.getenv("FEISHU_VERIFICATION_TOKEN"),
+    "ENCRYPT_KEY": os.getenv("FEISHU_ENCRYPT_KEY"),
     # 表格配置
     "TABLES": {
         "warehouse": {  # 仓库管理表

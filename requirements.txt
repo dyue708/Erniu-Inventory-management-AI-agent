@@ -1,3 +1,6 @@
 python-dotenv==1.0.0
 requests==2.31.0
-pandas==2.2.1 
+pandas==2.2.1
+lark-oapi
+flask==3.0.2
+pycryptodome==3.20.0
