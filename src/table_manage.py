@@ -43,17 +43,18 @@ class WarehouseManager(BaseTableManager):
 
 class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
-    COLUMNS = ['入库日期', '快递单号', '快递手机号', '采购平台', '入库数量', '入库单价', '存放位置']
+    COLUMNS = ['入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '入库数量', '入库单价', '存放位置']
 
     def add_inventory(self, data: dict) -> None:
         """添加库存记录"""
         try:
-            # 构造新数据行
+            # 按照正确的列顺序构造新数据行
             new_data = [[
                 data.get('入库日期', ''),
                 data.get('快递单号', ''),
                 data.get('快递手机号', ''),
                 data.get('采购平台', ''),
+                data.get('商品名称', ''),  # 添加商品名称列
                 data.get('入库数量', ''),
                 data.get('入库单价', ''),
                 data.get('存放位置', '')

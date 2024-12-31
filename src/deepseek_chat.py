@@ -6,6 +6,7 @@ import asyncio
 from feishu_sheet import FeishuSheet
 import re
 from datetime import datetime
+from table_manage import InventoryManager  # 添加这个导入
 
 # 配置日志记录器
 logger = logging.getLogger(__name__)
@@ -23,12 +24,8 @@ class DeepSeekChat:
         self.conversations = {}  # 存储多个会话的上下文，现在每条消息将包含时间戳
         self.max_history = DEEPSEEK_CONFIG.get("MAX_HISTORY", 10)  # 添加最大历史记录限制
         
-        # 初始化飞书表格操作对象
-        self.sheet = FeishuSheet(
-            app_id=FEISHU_CONFIG["APP_ID"],
-            app_secret=FEISHU_CONFIG["APP_SECRET"],
-            tables_config=FEISHU_CONFIG["TABLES"]
-        )
+        # 使用 InventoryManager 替换 FeishuSheet
+        self.inventory_manager = InventoryManager()
 
     def create_session(self, session_id: str) -> None:
         """创建新的会话"""
@@ -175,20 +172,20 @@ class DeepSeekChat:
             
             logger.info(f"开始写入库存记录，共 {len(products)} 条商品信息")
             
-            # 写入库存明细表
+            # 使用 InventoryManager 写入记录
             for product in products:
                 try:
-                    record = [
-                        entry_date,                # 入库日期
-                        tracking_number,           # 快递单号
-                        phone,                     # 快递手机号
-                        platform,                  # 采购平台
-                        product['name'],          # 商品名称
-                        product['quantity'],      # 入库数量
-                        product['price'],         # 入库单价
-                        location                  # 存放位置
-                    ]
-                    self.sheet.write_sheet('inventory', [record])
+                    inventory_data = {
+                        '入库日期': entry_date,
+                        '快递单号': tracking_number,
+                        '快递手机号': phone,
+                        '采购平台': platform,
+                        '商品名称': product['name'],
+                        '入库数量': product['quantity'],
+                        '入库单价': product['price'],
+                        '存放位置': location
+                    }
+                    self.inventory_manager.add_inventory(inventory_data)
                     logger.info(f"成功写入商品记录: {product['name']}")
                 except Exception as e:
                     logger.error(f"写入商品 {product['name']} 记录失败: {str(e)}", exc_info=True)
