@@ -85,9 +85,18 @@ class DeepSeekChat:
                     # 更新会话历史
                     self.conversations[session_id].append({"role": "user", "content": message})
                     self.conversations[session_id].append({"role": "assistant", "content": assistant_message})
-                    # 保持历史记录在限制范围内
-                    if len(self.conversations[session_id]) > self.max_history * 2:  # 乘2是因为每轮对话有用户和助手两条消息
-                        self.conversations[session_id] = self.conversations[session_id][-self.max_history * 2:]
+                    
+                    # 检查是否完成入库操作
+                    if "已成功录入" in assistant_message:
+                        # 保存这条成功消息后清除历史
+                        self.clear_session(session_id)
+                        # 重新添加系统提示词，为下一次对话做准备
+                        if final_system_prompt:
+                            self.conversations[session_id].append({"role": "system", "content": final_system_prompt})
+                    else:
+                        # 正常的历史记录管理
+                        if len(self.conversations[session_id]) > self.max_history * 2:
+                            self.conversations[session_id] = self.conversations[session_id][-self.max_history * 2:]
                     
                     return assistant_message
                 else:

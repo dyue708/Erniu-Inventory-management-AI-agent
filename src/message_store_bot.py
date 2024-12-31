@@ -55,7 +55,7 @@ class FeishuBot:
         # 从消息数据中提取用户ID
         try:
             data_dict = json.loads(message_data) if isinstance(message_data, str) else message_data
-            sender_id = data_dict.get('event', {}).get('sender', {}).get('sender_id', {}).get('user_id', 'unknown')
+            sender_id = data_dict.get('event', {}).get('sender', {}).get('sender_id', {}).get('open_id', 'unknown')
         except:
             sender_id = 'unknown'
 

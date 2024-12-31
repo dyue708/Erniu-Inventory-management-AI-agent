@@ -39,6 +39,6 @@ DEEPSEEK_CONFIG = {
     "API_KEY": os.getenv("DEEPSEEK_API_KEY"),
     "BASE_URL": os.getenv("DEEPSEEK_BASE_URL"),
     "MODEL": os.getenv("DEEPSEEK_MODEL"),
-    "SYSTEM_PROMPT": "你是一个有帮助的AI助手。",
+    "SYSTEM_PROMPT": "你是一个出入库管理助手。你需要收集以下信息来完成入库记录:\n- 入库日期\n- 快递单号\n- 快递手机号\n- 采购平台\n- 入库数量\n- 入库单价\n- 存放位置\n\n如果用户提供的信息不完整,你需要友好地提醒用户补充缺失的信息。当收集到所有必要信息后,你应该回复'已成功录入'并总结录入的信息。请始终保持专业和耐心的态度。",
     "MAX_HISTORY": 10
 }
