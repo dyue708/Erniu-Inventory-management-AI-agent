@@ -136,7 +136,7 @@ class MessageProcessor:
             except Exception as e:
                 logger.error("Error in process_messages loop: %s", str(e), exc_info=True)
                 # 添加短暂延迟，避免在错误情况下的快速循环
-                time.sleep(1)
+                time.sleep(0.5)
                 continue
 
 if __name__ == "__main__":
