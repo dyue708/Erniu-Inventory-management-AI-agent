@@ -5,6 +5,8 @@ from pathlib import Path
 import logging
 from lark_oapi import Client
 from config import FEISHU_CONFIG
+from deepseek_chat import DeepSeekChat
+import asyncio
 
 # 设置日志
 logging.basicConfig(
@@ -27,6 +29,10 @@ class MessageProcessor:
             .app_secret(self.app_secret) \
             .build()
         logger.info("MessageProcessor initialized with app_id: %s", self.app_id)
+        
+        # 添加停止标志
+        self._should_stop = False
+        self.deepseek = DeepSeekChat()
 
     def send_message(self, open_id, content):
         try:
@@ -65,46 +71,73 @@ class MessageProcessor:
             logger.error("Error sending message: %s", str(e), exc_info=True)
             return False
 
-    def process_messages(self):
-        logger.info("Starting message processing loop")
-        while True:
-            message_files = [f for f in self.message_dir.glob("*.json") 
-                           if f not in self.processed_files]
-            
-            if message_files:
-                logger.info("Found %d new message files to process", len(message_files))
+    def stop(self):
+        """安全停止处理循环"""
+        self._should_stop = True
+        logger.info("Message processor stopping...")
 
-            for msg_file in message_files:
-                try:
-                    logger.info("Processing file: %s", msg_file)
-                    with open(msg_file, 'r', encoding='utf-8') as f:
-                        message = json.load(f)
+    async def process_messages(self):
+        logger.info("Starting message processing loop")
+        while not self._should_stop:  # 使用停止标志
+            try:
+                # 遍历所有用户目录
+                user_dirs = [d for d in self.message_dir.iterdir() if d.is_dir()]
+                
+                for user_dir in user_dirs:
+                    # 获取该用户的所有未处理消息
+                    message_files = [
+                        f for f in user_dir.glob("*.json") 
+                        if f not in self.processed_files
+                    ]
                     
-                    # 解析飞书消息格式
-                    if message.get("type") == "p2p_message":
-                        event_data = json.loads(message["data"])
-                        sender_open_id = event_data["event"]["sender"]["sender_id"]["open_id"]
-                        message_content = json.loads(event_data["event"]["message"]["content"])
-                        original_text = message_content.get("text", "")
-                        
-                        logger.info("Received message from %s: %s", sender_open_id, original_text)
-                        
-                        # 直接发送原始文本，不做额外处理
-                        if self.send_message(sender_open_id, original_text):
-                            logger.info("Reply sent successfully")
-                        else:
-                            logger.error("Failed to send reply")
+                    if message_files:
+                        logger.info("Found %d new message files for user %s", 
+                                  len(message_files), user_dir.name)
+
+                    # 按时间顺序处理消息
+                    for msg_file in sorted(message_files):
+                        try:
+                            logger.info("Processing file: %s", msg_file)
+                            with open(msg_file, 'r', encoding='utf-8') as f:
+                                message = json.load(f)
+                            
+                            # 解析飞书消息格式
+                            if message.get("type") == "p2p_message":
+                                event_data = json.loads(message["data"])
+                                sender_open_id = event_data["event"]["sender"]["sender_id"]["open_id"]
+                                message_content = json.loads(event_data["event"]["message"]["content"])
+                                original_text = message_content.get("text", "")
+                                
+                                logger.info("Received message from %s: %s", 
+                                          sender_open_id, original_text)
+                                
+                                # Get AI response
+                                ai_response = await self.deepseek.chat(original_text, sender_open_id)
+                                
+                                # Send AI response back to user
+                                if self.send_message(sender_open_id, ai_response):
+                                    logger.info("AI reply sent successfully")
+                                else:
+                                    logger.error("Failed to send AI reply")
+                            
+                            # 处理完成后删除文件
+                            os.remove(msg_file)
+                            self.processed_files.add(msg_file)
+                            logger.info("Successfully processed and removed file: %s", 
+                                      msg_file)
+                            
+                        except Exception as e:
+                            logger.error("Error processing file %s: %s", msg_file, str(e))
+                            continue
                     
-                    # 处理完成后删除文件
-                    os.remove(msg_file)
-                    self.processed_files.add(msg_file)
-                    logger.info("Successfully processed and removed file: %s", msg_file)
-                    
-                except Exception as e:
-                    logger.error("Error processing file %s: %s", msg_file, str(e))
-                    continue
-            
-            time.sleep(2)
+                # 将 sleep 移到循环末尾，并增加可配置性
+                time.sleep(self.poll_interval if hasattr(self, 'poll_interval') else 2)
+                
+            except Exception as e:
+                logger.error("Error in process_messages loop: %s", str(e), exc_info=True)
+                # 添加短暂延迟，避免在错误情况下的快速循环
+                time.sleep(1)
+                continue
 
 if __name__ == "__main__":
     processor = MessageProcessor(
@@ -112,4 +145,4 @@ if __name__ == "__main__":
         app_secret=FEISHU_CONFIG["APP_SECRET"], 
         message_dir=Path("messages")
     )
-    processor.process_messages()
+    asyncio.run(processor.process_messages())

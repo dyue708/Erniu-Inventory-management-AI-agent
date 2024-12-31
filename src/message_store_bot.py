@@ -43,7 +43,7 @@ class FeishuBot:
         return final_config
 
     def _save_message_to_file(self, message_data: dict, message_type: str):
-        """将消息保存到本地文件
+        """将消息保存到本地文件，按用户分类存储
         Args:
             message_data: 消息数据
             message_type: 消息类型
@@ -52,17 +52,26 @@ class FeishuBot:
         from datetime import datetime
         import os
 
-        # 确保messages目录存在
-        os.makedirs('messages', exist_ok=True)
+        # 从消息数据中提取用户ID
+        try:
+            data_dict = json.loads(message_data) if isinstance(message_data, str) else message_data
+            sender_id = data_dict.get('event', {}).get('sender', {}).get('sender_id', {}).get('user_id', 'unknown')
+        except:
+            sender_id = 'unknown'
+
+        # 创建用户专属的消息目录
+        user_message_dir = os.path.join('messages', sender_id)
+        os.makedirs(user_message_dir, exist_ok=True)
         
         # 生成带时间戳的文件名
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-        filename = f'messages/message_{timestamp}.json'
+        filename = os.path.join(user_message_dir, f'message_{timestamp}.json')
         
         # 准备写入的数据
         data = {
             'type': message_type,
             'timestamp': datetime.now().isoformat(),
+            'sender_id': sender_id,
             'data': message_data
         }
         
@@ -72,12 +81,10 @@ class FeishuBot:
 
     def _do_p2_im_message_receive_v1(self, data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         """处理P2P消息接收事件"""
-        print(f'收到P2P消息接收事件: {lark.JSON.marshal(data, indent=4)}')
         self._save_message_to_file(lark.JSON.marshal(data), 'p2p_message')
 
     def _do_message_event(self, data: lark.CustomizedEvent) -> None:
         """处理自定义消息事件"""
-        print(f'收到自定义消息事件: {lark.JSON.marshal(data, indent=4)}')
         self._save_message_to_file(lark.JSON.marshal(data), 'custom_message')
 
     def _create_event_handler(self):
@@ -114,7 +121,7 @@ class FeishuBot:
             self.config["APP_ID"],
             self.config["APP_SECRET"],
             event_handler=self.event_handler,
-            log_level=lark.LogLevel.DEBUG
+            log_level=lark.LogLevel.INFO
         )
     
     def start(self):
@@ -123,15 +130,15 @@ class FeishuBot:
 
     def _handle_bot_added(self, data: lark.CustomizedEvent) -> None:
         """处理机器人被添加到群组的事件"""
-        print(f'机器人被添加到群组: {lark.JSON.marshal(data, indent=4)}')
+        pass
 
     def _handle_bot_removed(self, data: lark.CustomizedEvent) -> None:
         """处理机器人被移出群组的事件"""
-        print(f'机器人被移出群组: {lark.JSON.marshal(data, indent=4)}')
+        pass
 
     def _handle_message_reaction(self, data: lark.CustomizedEvent) -> None:
         """处理消息回应事件"""
-        print(f'收到消息回应: {lark.JSON.marshal(data, indent=4)}')
+        pass
 
 def main():
     """主函数，创建并启动消息存储机器人"""

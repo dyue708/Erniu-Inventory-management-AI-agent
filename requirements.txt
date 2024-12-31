@@ -1,6 +1,10 @@
+# 基础依赖
 python-dotenv==1.0.0
-requests==2.31.0
-pandas==2.2.1
 lark-oapi
-flask==3.0.2
-pycryptodome==3.20.0
+httpx==0.27.0
+
+# 数据处理
+pandas>=2.0.0
+
+# 其他工具包
+pathlib==1.0.1
