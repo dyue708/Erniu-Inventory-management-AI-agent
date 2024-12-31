@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 import json
 from config import DEEPSEEK_CONFIG, FEISHU_CONFIG
@@ -5,6 +6,13 @@ import asyncio
 from feishu_sheet import FeishuSheet
 import re
 from datetime import datetime
+
+# 配置日志记录器
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 class DeepSeekChat:
     def __init__(self):
