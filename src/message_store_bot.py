@@ -4,10 +4,10 @@ import lark_oapi as lark
 from config import FEISHU_CONFIG
 
 class FeishuBot:
-    """飞书机器人类,用于处理飞书消息事件"""
+    """飞书机器人类，专门用于存储接收到的消息"""
     
     def __init__(self, app_id=None, app_secret=None, verification_token=None, encrypt_key=None, config=None):
-        """初始化飞书机器人,创建事件处理器和客户端
+        """初始化消息存储机器人，创建事件处理器和客户端
         Args:
             app_id: 应用 ID
             app_secret: 应用密钥
@@ -42,19 +42,43 @@ class FeishuBot:
             
         return final_config
 
-    def _do_p2_im_message_receive_v1(self, data: lark.im.v1.P2ImMessageReceiveV1) -> None:
-        """处理P2P消息接收事件
+    def _save_message_to_file(self, message_data: dict, message_type: str):
+        """将消息保存到本地文件
         Args:
-            data: 消息数据
+            message_data: 消息数据
+            message_type: 消息类型
         """
+        import json
+        from datetime import datetime
+        import os
+
+        # 确保messages目录存在
+        os.makedirs('messages', exist_ok=True)
+        
+        # 生成带时间戳的文件名
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+        filename = f'messages/message_{timestamp}.json'
+        
+        # 准备写入的数据
+        data = {
+            'type': message_type,
+            'timestamp': datetime.now().isoformat(),
+            'data': message_data
+        }
+        
+        # 写入文件
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+
+    def _do_p2_im_message_receive_v1(self, data: lark.im.v1.P2ImMessageReceiveV1) -> None:
+        """处理P2P消息接收事件"""
         print(f'收到P2P消息接收事件: {lark.JSON.marshal(data, indent=4)}')
+        self._save_message_to_file(lark.JSON.marshal(data), 'p2p_message')
 
     def _do_message_event(self, data: lark.CustomizedEvent) -> None:
-        """处理自定义消息事件
-        Args:
-            data: 事件数据
-        """
+        """处理自定义消息事件"""
         print(f'收到自定义消息事件: {lark.JSON.marshal(data, indent=4)}')
+        self._save_message_to_file(lark.JSON.marshal(data), 'custom_message')
 
     def _create_event_handler(self):
         """创建事件分发处理器
@@ -110,7 +134,7 @@ class FeishuBot:
         print(f'收到消息回应: {lark.JSON.marshal(data, indent=4)}')
 
 def main():
-    """主函数,创建并启动飞书机器人"""
+    """主函数，创建并启动消息存储机器人"""
     bot = FeishuBot(config=FEISHU_CONFIG)
     bot.start()
 

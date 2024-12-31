@@ -1,0 +1,223 @@
+2024-12-31 11:18:38,232 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:18:38,233 - INFO - Starting message processing loop
+2024-12-31 11:18:38,234 - INFO - Found 1 new message files to process
+2024-12-31 11:18:38,234 - INFO - Processing file: messages\message_20241231_111827_300375.json
+2024-12-31 11:18:38,235 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 111
+2024-12-31 11:18:38,235 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:18:38,236 - ERROR - Error sending message: 'ImService' object has no attribute 'message'
+2024-12-31 11:18:38,237 - ERROR - Failed to send reply
+2024-12-31 11:18:38,238 - INFO - Successfully processed and removed file: messages\message_20241231_111827_300375.json
+2024-12-31 11:18:56,315 - INFO - Found 1 new message files to process
+2024-12-31 11:18:56,316 - INFO - Processing file: messages\message_20241231_111855_026399.json
+2024-12-31 11:18:56,317 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 5656
+2024-12-31 11:18:56,317 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:18:56,318 - ERROR - Error sending message: 'ImService' object has no attribute 'message'
+2024-12-31 11:18:56,318 - ERROR - Failed to send reply
+2024-12-31 11:18:56,319 - INFO - Successfully processed and removed file: messages\message_20241231_111855_026399.json
+2024-12-31 11:19:16,420 - INFO - Found 1 new message files to process
+2024-12-31 11:19:16,421 - INFO - Processing file: messages\message_20241231_111915_710102.json
+2024-12-31 11:19:16,422 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 9999
+2024-12-31 11:19:16,423 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:19:16,424 - ERROR - Error sending message: 'ImService' object has no attribute 'message'
+2024-12-31 11:19:16,424 - ERROR - Failed to send reply
+2024-12-31 11:19:16,425 - INFO - Successfully processed and removed file: messages\message_20241231_111915_710102.json
+2024-12-31 11:20:19,838 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:20:19,840 - INFO - Starting message processing loop
+2024-12-31 11:20:27,879 - INFO - Found 1 new message files to process
+2024-12-31 11:20:27,882 - INFO - Processing file: messages\message_20241231_112026_934255.json
+2024-12-31 11:20:27,884 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 555
+2024-12-31 11:20:27,886 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:20:27,887 - ERROR - Error sending message: Message.create() got an unexpected keyword argument 'request_body'
+2024-12-31 11:20:27,890 - ERROR - Failed to send reply
+2024-12-31 11:20:27,893 - INFO - Successfully processed and removed file: messages\message_20241231_112026_934255.json
+2024-12-31 11:20:33,932 - INFO - Found 1 new message files to process
+2024-12-31 11:20:33,933 - INFO - Processing file: messages\message_20241231_112033_821918.json
+2024-12-31 11:20:33,935 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 5656
+2024-12-31 11:20:33,936 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:20:33,937 - ERROR - Error sending message: Message.create() got an unexpected keyword argument 'request_body'
+2024-12-31 11:20:33,938 - ERROR - Failed to send reply
+2024-12-31 11:20:33,940 - INFO - Successfully processed and removed file: messages\message_20241231_112033_821918.json
+2024-12-31 11:21:22,054 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:21:22,054 - INFO - Starting message processing loop
+2024-12-31 11:21:30,097 - INFO - Found 1 new message files to process
+2024-12-31 11:21:30,098 - INFO - Processing file: messages\message_20241231_112128_585739.json
+2024-12-31 11:21:30,099 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 999
+2024-12-31 11:21:30,099 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:21:30,100 - ERROR - Error sending message: 'CreateMessageRequestBuilder' object has no attribute 'receive_id'
+2024-12-31 11:21:30,101 - ERROR - Failed to send reply
+2024-12-31 11:21:30,102 - INFO - Successfully processed and removed file: messages\message_20241231_112128_585739.json
+2024-12-31 11:22:19,696 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:22:19,697 - INFO - Starting message processing loop
+2024-12-31 11:22:27,731 - INFO - Found 1 new message files to process
+2024-12-31 11:22:27,733 - INFO - Processing file: messages\message_20241231_112226_764854.json
+2024-12-31 11:22:27,735 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 가가가
+2024-12-31 11:22:27,737 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:22:27,739 - ERROR - Error sending message: 'CreateMessageRequestBuilder' object has no attribute 'receive_id'
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_processor.py", line 42, in send_message
+    .receive_id(open_id) \
+AttributeError: 'CreateMessageRequestBuilder' object has no attribute 'receive_id'
+2024-12-31 11:22:27,745 - ERROR - Failed to send reply
+2024-12-31 11:22:27,747 - INFO - Successfully processed and removed file: messages\message_20241231_112226_764854.json
+2024-12-31 11:24:15,555 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:24:15,555 - INFO - Starting message processing loop
+2024-12-31 11:24:21,594 - INFO - Found 1 new message files to process
+2024-12-31 11:24:21,595 - INFO - Processing file: messages\message_20241231_112421_159155.json
+2024-12-31 11:24:21,598 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 666
+2024-12-31 11:24:21,599 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:24:22,380 - ERROR - Failed to send message: field validation failed
+2024-12-31 11:24:22,381 - ERROR - Failed to send reply
+2024-12-31 11:24:22,381 - INFO - Successfully processed and removed file: messages\message_20241231_112421_159155.json
+2024-12-31 11:25:04,899 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:25:04,900 - INFO - Starting message processing loop
+2024-12-31 11:25:10,940 - INFO - Found 1 new message files to process
+2024-12-31 11:25:10,941 - INFO - Processing file: messages\message_20241231_112509_402829.json
+2024-12-31 11:25:10,943 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 11
+2024-12-31 11:25:10,943 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:25:10,944 - INFO - Request body: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "\\u6211\\u6536\\u5230\\u4e86\\u4f60\\u7684\\u6d88\\u606f\\uff1a11"}'}
+2024-12-31 11:25:11,760 - ERROR - Failed to send message: <lark_oapi.api.im.v1.model.create_message_response.CreateMessageResponse object at 0x000002577F8290C0>
+2024-12-31 11:25:11,762 - ERROR - Failed to send reply
+2024-12-31 11:25:11,764 - INFO - Successfully processed and removed file: messages\message_20241231_112509_402829.json
+2024-12-31 11:25:21,796 - INFO - Found 1 new message files to process
+2024-12-31 11:25:21,796 - INFO - Processing file: messages\message_20241231_112521_041043.json
+2024-12-31 11:25:21,797 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 1111
+2024-12-31 11:25:21,797 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:25:21,797 - INFO - Request body: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "\\u6211\\u6536\\u5230\\u4e86\\u4f60\\u7684\\u6d88\\u606f\\uff1a1111"}'}
+2024-12-31 11:25:22,179 - ERROR - Failed to send message: <lark_oapi.api.im.v1.model.create_message_response.CreateMessageResponse object at 0x000002577F828100>
+2024-12-31 11:25:22,181 - ERROR - Failed to send reply
+2024-12-31 11:25:22,183 - INFO - Successfully processed and removed file: messages\message_20241231_112521_041043.json
+2024-12-31 11:25:34,246 - INFO - Found 1 new message files to process
+2024-12-31 11:25:34,247 - INFO - Processing file: messages\message_20241231_112532_907353.json
+2024-12-31 11:25:34,247 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 각댐가
+2024-12-31 11:25:34,249 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:25:34,249 - INFO - Request body: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "\\u6211\\u6536\\u5230\\u4e86\\u4f60\\u7684\\u6d88\\u606f\\uff1a\\u963f\\u8fbe\\u554a"}'}
+2024-12-31 11:25:34,638 - ERROR - Failed to send message: <lark_oapi.api.im.v1.model.create_message_response.CreateMessageResponse object at 0x000002577F8291B0>
+2024-12-31 11:25:34,639 - ERROR - Failed to send reply
+2024-12-31 11:25:34,640 - INFO - Successfully processed and removed file: messages\message_20241231_112532_907353.json
+2024-12-31 11:26:05,755 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:26:05,756 - INFO - Starting message processing loop
+2024-12-31 11:26:13,791 - INFO - Found 1 new message files to process
+2024-12-31 11:26:13,793 - INFO - Processing file: messages\message_20241231_112612_195396.json
+2024-12-31 11:26:13,796 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 가
+2024-12-31 11:26:13,798 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:26:13,800 - INFO - Request body: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "\\u6211\\u6536\\u5230\\u4e86\\u4f60\\u7684\\u6d88\\u606f\\uff1a\\u554a"}'}
+2024-12-31 11:26:14,619 - INFO - Response code: 99992402
+2024-12-31 11:26:14,620 - INFO - Response msg: field validation failed
+2024-12-31 11:26:14,620 - INFO - Response data: None
+2024-12-31 11:26:14,621 - ERROR - Failed to send message: code=99992402, msg=field validation failed
+2024-12-31 11:26:14,622 - ERROR - Failed to send reply
+2024-12-31 11:26:14,623 - INFO - Successfully processed and removed file: messages\message_20241231_112612_195396.json
+2024-12-31 11:27:35,747 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:27:35,747 - INFO - Starting message processing loop
+2024-12-31 11:27:41,753 - INFO - Found 1 new message files to process
+2024-12-31 11:27:41,753 - INFO - Processing file: messages\message_20241231_112741_666874.json
+2024-12-31 11:27:41,754 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 가
+2024-12-31 11:27:41,754 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:27:41,755 - INFO - Request body before build: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "가"}'}
+2024-12-31 11:27:41,755 - INFO - Sending request...
+2024-12-31 11:27:42,583 - INFO - Response code: 99992402
+2024-12-31 11:27:42,584 - INFO - Response msg: field validation failed
+2024-12-31 11:27:42,585 - INFO - Response data: None
+2024-12-31 11:27:42,586 - ERROR - Failed to send message: code=99992402, msg=field validation failed
+2024-12-31 11:27:42,586 - ERROR - Failed to send reply
+2024-12-31 11:27:42,588 - INFO - Successfully processed and removed file: messages\message_20241231_112741_666874.json
+2024-12-31 11:28:12,711 - INFO - Found 1 new message files to process
+2024-12-31 11:28:12,712 - INFO - Processing file: messages\message_20241231_112812_295194.json
+2024-12-31 11:28:12,713 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 111
+2024-12-31 11:28:12,713 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:28:12,714 - INFO - Request body before build: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "111"}'}
+2024-12-31 11:28:12,715 - INFO - Sending request...
+2024-12-31 11:28:13,170 - INFO - Response code: 99992402
+2024-12-31 11:28:13,171 - INFO - Response msg: field validation failed
+2024-12-31 11:28:13,172 - INFO - Response data: None
+2024-12-31 11:28:13,172 - ERROR - Failed to send message: code=99992402, msg=field validation failed
+2024-12-31 11:28:13,172 - ERROR - Failed to send reply
+2024-12-31 11:28:13,173 - INFO - Successfully processed and removed file: messages\message_20241231_112812_295194.json
+2024-12-31 11:28:37,410 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:28:37,411 - INFO - Starting message processing loop
+2024-12-31 11:28:43,448 - INFO - Found 1 new message files to process
+2024-12-31 11:28:43,450 - INFO - Processing file: messages\message_20241231_112843_096980.json
+2024-12-31 11:28:43,453 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 갈갈
+2024-12-31 11:28:43,456 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:28:43,457 - INFO - Request body before build: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': {'text': '갈갈'}}
+2024-12-31 11:28:43,459 - INFO - Sending request...
+2024-12-31 11:28:44,433 - INFO - Response code: 99992402
+2024-12-31 11:28:44,434 - INFO - Response msg: field validation failed
+2024-12-31 11:28:44,434 - INFO - Response data: None
+2024-12-31 11:28:44,435 - ERROR - Failed to send message: code=99992402, msg=field validation failed
+2024-12-31 11:28:44,435 - ERROR - Failed to send reply
+2024-12-31 11:28:44,436 - INFO - Successfully processed and removed file: messages\message_20241231_112843_096980.json
+2024-12-31 11:29:39,309 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:29:39,310 - INFO - Starting message processing loop
+2024-12-31 11:29:45,336 - INFO - Found 1 new message files to process
+2024-12-31 11:29:45,338 - INFO - Processing file: messages\message_20241231_112944_482759.json
+2024-12-31 11:29:45,340 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 11
+2024-12-31 11:29:45,341 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:29:45,342 - INFO - Request body before build: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "11"}'}
+2024-12-31 11:29:45,343 - INFO - Sending request with content: {"text": "11"}
+2024-12-31 11:29:46,120 - INFO - Response code: 99992402
+2024-12-31 11:29:46,122 - INFO - Response msg: field validation failed
+2024-12-31 11:29:46,123 - INFO - Response data: None
+2024-12-31 11:29:46,124 - ERROR - Failed to send message: code=99992402, msg=field validation failed
+2024-12-31 11:29:46,126 - ERROR - Failed to send reply
+2024-12-31 11:29:46,128 - INFO - Successfully processed and removed file: messages\message_20241231_112944_482759.json
+2024-12-31 11:33:19,111 - INFO - Found 1 new message files to process
+2024-12-31 11:33:19,112 - INFO - Processing file: messages\message_20241231_113318_342732.json
+2024-12-31 11:33:19,113 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 111111
+2024-12-31 11:33:19,114 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:33:19,115 - INFO - Request body before build: {'receive_id_type': 'open_id', 'receive_id': 'ou_2b4e5a86c330f3539913fc5bfe484872', 'msg_type': 'text', 'content': '{"text": "111111"}'}
+2024-12-31 11:33:19,116 - INFO - Sending request with content: {"text": "111111"}
+2024-12-31 11:33:19,513 - INFO - Response code: 99992402
+2024-12-31 11:33:19,514 - INFO - Response msg: field validation failed
+2024-12-31 11:33:19,514 - INFO - Response data: None
+2024-12-31 11:33:19,514 - ERROR - Failed to send message: code=99992402, msg=field validation failed
+2024-12-31 11:33:19,515 - ERROR - Failed to send reply
+2024-12-31 11:33:19,515 - INFO - Successfully processed and removed file: messages\message_20241231_113318_342732.json
+2024-12-31 11:33:57,929 - INFO - MessageProcessor initialized with app_id: cli_a7e4a54c7376100d
+2024-12-31 11:33:57,930 - INFO - Starting message processing loop
+2024-12-31 11:33:57,931 - INFO - Found 3 new message files to process
+2024-12-31 11:33:57,931 - INFO - Processing file: messages\message_20241231_113344_281566.json
+2024-12-31 11:33:57,932 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 11111111
+2024-12-31 11:33:57,932 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:33:57,933 - INFO - Sending request...
+2024-12-31 11:33:59,079 - INFO - Message sent successfully
+2024-12-31 11:33:59,081 - INFO - Reply sent successfully
+2024-12-31 11:33:59,083 - INFO - Successfully processed and removed file: messages\message_20241231_113344_281566.json
+2024-12-31 11:33:59,086 - INFO - Processing file: messages\message_20241231_113346_041104.json
+2024-12-31 11:33:59,087 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 1
+2024-12-31 11:33:59,088 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:33:59,089 - INFO - Sending request...
+2024-12-31 11:33:59,934 - INFO - Message sent successfully
+2024-12-31 11:33:59,935 - INFO - Reply sent successfully
+2024-12-31 11:33:59,936 - INFO - Successfully processed and removed file: messages\message_20241231_113346_041104.json
+2024-12-31 11:33:59,937 - INFO - Processing file: messages\message_20241231_113350_235152.json
+2024-12-31 11:33:59,938 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 1111
+2024-12-31 11:33:59,939 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:33:59,939 - INFO - Sending request...
+2024-12-31 11:34:00,751 - INFO - Message sent successfully
+2024-12-31 11:34:00,752 - INFO - Reply sent successfully
+2024-12-31 11:34:00,753 - INFO - Successfully processed and removed file: messages\message_20241231_113350_235152.json
+2024-12-31 11:34:10,788 - INFO - Found 1 new message files to process
+2024-12-31 11:34:10,788 - INFO - Processing file: messages\message_20241231_113409_523403.json
+2024-12-31 11:34:10,789 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 갈갈
+2024-12-31 11:34:10,789 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:34:10,790 - INFO - Sending request...
+2024-12-31 11:34:11,551 - INFO - Message sent successfully
+2024-12-31 11:34:11,551 - INFO - Reply sent successfully
+2024-12-31 11:34:11,552 - INFO - Successfully processed and removed file: messages\message_20241231_113409_523403.json
+2024-12-31 11:34:15,563 - INFO - Found 1 new message files to process
+2024-12-31 11:34:15,563 - INFO - Processing file: messages\message_20241231_113415_542374.json
+2024-12-31 11:34:15,564 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 콱봤
+2024-12-31 11:34:15,564 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:34:15,565 - INFO - Sending request...
+2024-12-31 11:34:16,338 - INFO - Message sent successfully
+2024-12-31 11:34:16,339 - INFO - Reply sent successfully
+2024-12-31 11:34:16,339 - INFO - Successfully processed and removed file: messages\message_20241231_113415_542374.json
+2024-12-31 11:34:26,384 - INFO - Found 1 new message files to process
+2024-12-31 11:34:26,386 - INFO - Processing file: messages\message_20241231_113424_733738.json
+2024-12-31 11:34:26,389 - INFO - Received message from ou_2b4e5a86c330f3539913fc5bfe484872: 1231352312
+2024-12-31 11:34:26,391 - INFO - Attempting to send message to open_id: ou_2b4e5a86c330f3539913fc5bfe484872
+2024-12-31 11:34:26,393 - INFO - Sending request...
+2024-12-31 11:34:27,098 - INFO - Message sent successfully
+2024-12-31 11:34:27,099 - INFO - Reply sent successfully
+2024-12-31 11:34:27,100 - INFO - Successfully processed and removed file: messages\message_20241231_113424_733738.json
