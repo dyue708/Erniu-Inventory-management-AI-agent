@@ -34,21 +34,24 @@ class MessageProcessor:
         self._should_stop = False
         self.deepseek = DeepSeekChat()
 
-    def send_message(self, open_id, content):
+    def send_message(self, receive_id, content, chat_type="p2p"):
         try:
-            logger.info("Attempting to send message to open_id: %s", open_id)
+            logger.info("Attempting to send message to %s: %s", chat_type, receive_id)
             from lark_oapi.api.im.v1 import CreateMessageRequest, CreateMessageRequestBody
+
+            # 根据消息类型设置 receive_id_type
+            receive_id_type = "open_id" if chat_type == "p2p" else "chat_id"
 
             # 使用 builder 模式构建请求体
             request_body = CreateMessageRequestBody.builder() \
-                .receive_id(open_id) \
+                .receive_id(receive_id) \
                 .msg_type("text") \
                 .content(json.dumps({"text": content}, ensure_ascii=False)) \
                 .build()
 
             # 构建完整请求
             request = CreateMessageRequest.builder() \
-                .receive_id_type("open_id") \
+                .receive_id_type(receive_id_type) \
                 .request_body(request_body) \
                 .build()
 
@@ -102,20 +105,32 @@ class MessageProcessor:
                                 message = json.load(f)
                             
                             # 解析飞书消息格式
-                            if message.get("type") == "p2p_message":
+                            if message.get("type") in ["p2p_message", "message"]:  # 添加 "message" 类型支持群消息
                                 event_data = json.loads(message["data"])
-                                sender_open_id = event_data["event"]["sender"]["sender_id"]["open_id"]
-                                message_content = json.loads(event_data["event"]["message"]["content"])
+                                event = event_data["event"]
+                                message_type = event["message"]["chat_type"]
+                                
+                                # 获取发送者 ID 和消息内容
+                                sender_open_id = event["sender"]["sender_id"]["open_id"]
+                                message_content = json.loads(event["message"]["content"])
                                 original_text = message_content.get("text", "")
                                 
-                                logger.info("Received message from %s: %s", 
-                                          sender_open_id, original_text)
+                                # 确定接收者 ID 和类型
+                                if message_type == "group":
+                                    receive_id = event["message"]["chat_id"]
+                                    chat_type = "group"
+                                else:
+                                    receive_id = sender_open_id
+                                    chat_type = "p2p"
+                                
+                                logger.info("Received %s message from %s: %s", 
+                                          chat_type, sender_open_id, original_text)
                                 
                                 # Get AI response
                                 ai_response = await self.deepseek.chat(original_text, sender_open_id)
                                 
-                                # Send AI response back to user
-                                if self.send_message(sender_open_id, ai_response):
+                                # Send AI response back
+                                if self.send_message(receive_id, ai_response, chat_type):
                                     logger.info("AI reply sent successfully")
                                 else:
                                     logger.error("Failed to send AI reply")
