@@ -20,7 +20,12 @@ class DeepSeekChat:
         self.api_key = DEEPSEEK_CONFIG["API_KEY"]
         self.api_base = DEEPSEEK_CONFIG["BASE_URL"]
         self.model = DEEPSEEK_CONFIG["MODEL"]
-        self.system_prompt = DEEPSEEK_CONFIG.get("SYSTEM_PROMPT", None)  # 添加默认系统提示
+        
+        # 在系统提示词中添加今日日期
+        base_prompt = DEEPSEEK_CONFIG.get("SYSTEM_PROMPT", "")
+        today = datetime.now().strftime("%Y-%m-%d")
+        self.system_prompt = f"{base_prompt}\n今天是 {today}"
+        
         self.conversations = {}  # 存储多个会话的上下文，现在每条消息将包含时间戳
         self.max_history = DEEPSEEK_CONFIG.get("MAX_HISTORY", 10)  # 添加最大历史记录限制
         
