@@ -28,54 +28,56 @@ class DeepSeekChat:
         self.warehouses = self._get_warehouses()
         
         # 修改系统提示词
-        base_prompt = """你是一个出入库管理助手。你需要收集以下信息来完成入库记录:
-- 入库日期(如未指定则使用当前时间)
-- 快递单号
-- 快递手机号
-- 采购平台
-- 商品信息(可包含多个商品):
-  * 商品名称
-  * 入库数量
-  * 入库单价
-- 存放位置(请从以下仓库中选择):
-  * 仓库名
-  * 仓库分类
-  * 仓库地址
+        base_prompt = """你是一个出入库管理助手。你需要帮助收集完整的入库信息，并以JSON格式返回。
 
-当收集到所有必要信息后，请按以下格式回复：
-1. 首先输出 <JSON> 开始标记
-2. 然后输出包含所有收集信息的 JSON 数据
-3. 输出 </JSON> 结束标记
-4. 最后用简短友好的语言总结录入信息
+每次对话你都需要：
+1. 分析用户输入，提取相关信息
+2. 将信息格式化为JSON
+3. 检查是否所有必要信息都已收集
+4. 如果信息完整，返回完整的JSON；如果不完整，返回已收集的信息并友好询问缺失信息
 
-JSON 数据结构示例：
+必要的信息字段包括：
 {
-    "entry_date": "2024-03-20",
-    "tracking_number": "SF1234567",
-    "phone": "13800138000",
-    "platform": "淘宝",
+    "entry_date": "入库日期（YYYY-MM-DD格式，默认今天）",
+    "tracking_number": "快递单号",
+    "phone": "手机号",
+    "platform": "采购平台",
     "warehouse": {
-        "name": "仓库A",
-        "category": "电子产品",
-        "address": "北京市"
+        "name": "仓库名",
+        "category": "仓库分类",
+        "address": "仓库地址"
     },
     "products": [
         {
-            "name": "商品1",
-            "quantity": 10,
-            "price": 99.9
+            "name": "商品名称",
+            "quantity": "数量",
+            "price": "单价"
         }
     ]
-}"""
+}
+
+请按以下格式返回数据：
+1. 如果信息完整：
+<JSON>
+{完整的JSON数据}
+</JSON>
+入库信息已收集完整，我已记录。
+
+2. 如果信息不完整：
+<JSON>
+{当前已收集的JSON数据}
+</JSON>
+请继续提供：[缺失的字段列表]"""
         
         # 在系统提示词中添加今日日期和可用仓库信息
         today = datetime.now().strftime("%Y-%m-%d")
         warehouse_info = self._format_warehouse_info()
-        self.system_prompt = f"{base_prompt}\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}"
+        self.system_prompt = f"{base_prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}"
         
         self.conversations = {}
         self.max_history = DEEPSEEK_CONFIG.get("MAX_HISTORY", 10)
         self.inventory_manager = InventoryManager()
+        self.current_inventory_data = {}  # 存储当前收集的信息
 
     def _get_warehouses(self) -> pd.DataFrame:
         """获取仓库信息"""
@@ -138,7 +140,7 @@ JSON 数据结构示例：
 
             # 如果是入库指令，使用特定的提示词
             if "入库" in message:
-                prompt = f"""请将以下入库信息解析为JSON格式。必须包含以下字段：
+                prompt = f"""请帮助收集完整的入库信息。必须包含以下字段：
                 - entry_date: 入库日期（YYYY-MM-DD格式）
                 - tracking_number: 快递单号
                 - phone: 手机号
@@ -146,9 +148,7 @@ JSON 数据结构示例：
                 - warehouse: 包含 name（仓库名）, category（仓库分类）, address（仓库地址）的对象
                 - products: 商品数组，每个商品包含 name（商品名）, quantity（数量）, price（单价）
 
-用户消息：{message}
-
-请确保返回的JSON格式如下：
+只有在收集到所有必要信息后，才按以下格式输出：
 <JSON>
 {{
     "entry_date": "YYYY-MM-DD",
@@ -175,7 +175,8 @@ JSON 数据结构示例：
 }}
 </JSON>
 
-然后用中文总结一下入库信息。"""
+如果信息不完整，请友好地询问缺失的信息，不要输出JSON格式。
+收集完整后，用中文总结入库信息。"""
 
             # 确保会话存在
             self.create_session(user_id)
@@ -233,19 +234,28 @@ JSON 数据结构示例：
                             "timestamp": current_time
                         })
                         
-                        # 检查是否完成入库操作
-                        if "已成功录入" in assistant_message:
-                            try:
-                                # 解析入库信息并写入表格
-                                self._write_inventory_record(assistant_message)
-                                
-                                # 保存这条成功消息后清除历史
-                                self.clear_session(user_id)
-                                # 重新添加系统提示词，为下一次对话做准备
-                                if final_system_prompt:
-                                    self.conversations[user_id].append({"role": "system", "content": final_system_prompt})
-                            except Exception as e:
-                                return f"数据处理过程中出现错误：{str(e)}"
+                        # 修改检查逻辑，只在找到完整的 JSON 时才尝试写入
+                        if "<JSON>" in assistant_message and "</JSON>" in assistant_message:
+                            json_match = re.search(r'<JSON>(.*?)</JSON>', assistant_message, re.DOTALL)
+                            if json_match:
+                                json_str = json_match.group(1).strip()
+                                try:
+                                    data = json.loads(json_str)
+                                    # 验证数据是否完整
+                                    if self._validate_inventory_data(data):
+                                        # 数据完整才写入表格
+                                        self._write_inventory_record(assistant_message)
+                                        # 保存这条成功消息后清除历史
+                                        self.clear_session(user_id)
+                                        # 重新添加系统提示词，为下一次对话做准备
+                                        if final_system_prompt:
+                                            self.conversations[user_id].append({
+                                                "role": "system", 
+                                                "content": final_system_prompt
+                                            })
+                                except Exception as e:
+                                    logger.error(f"处理 JSON 数据时出错: {str(e)}")
+                                    # 不中断对话，继续收集信息
                         
                         # 正常的历史记录管理
                         if len(self.conversations[user_id]) > self.max_history * 2:
@@ -266,32 +276,89 @@ JSON 数据结构示例：
         if session_id in self.conversations:
             self.conversations[session_id] = []
 
+    def _process_inventory_message(self, message: str) -> None:
+        """处理入库相关的消息"""
+        try:
+            # 尝试从消息中提取 JSON 数据
+            json_match = re.search(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
+            if not json_match:
+                logger.info("消息中未找到 JSON 数据")
+                return None
+                
+            json_str = json_match.group(1).strip()
+            new_data = json.loads(json_str)
+            
+            # 将新数据合并到现有数据中
+            self.current_inventory_data.update(new_data)
+            
+            # 检查是否所有必要信息都已收集
+            required_fields = {
+                'entry_date': '入库日期',
+                'tracking_number': '快递单号',
+                'phone': '手机号',
+                'platform': '采购平台',
+                'warehouse': {
+                    'name': '仓库名',
+                    'category': '仓库分类',
+                    'address': '仓库地址'
+                },
+                'products': ['name', 'quantity', 'price']
+            }
+            
+            missing_fields = self._check_missing_fields(required_fields)
+            
+            if missing_fields:
+                # 构建当前已收集数据的 JSON 响应
+                response_data = {
+                    'status': 'incomplete',
+                    'current_data': self.current_inventory_data,
+                    'missing_fields': missing_fields
+                }
+                return response_data
+            
+            # 所有信息收集完毕，可以写入数据库
+            self._write_inventory_record(self.current_inventory_data)
+            
+            # 写入成功后清空当前数据并返回成功响应
+            response_data = {
+                'status': 'success',
+                'message': '入库信息已成功记录'
+            }
+            self.current_inventory_data = {}
+            return response_data
+            
+        except json.JSONDecodeError:
+            logger.error("JSON 解析错误")
+            return {'status': 'error', 'message': 'JSON 格式错误'}
+        except Exception as e:
+            logger.error(f"处理入库记录时发生错误: {str(e)}", exc_info=True)
+            return {'status': 'error', 'message': str(e)}
+            
     def _write_inventory_record(self, message: str) -> None:
         """解析入库信息并写入库存明细表"""
         try:
-            # 提取 JSON 数据
-            json_match = re.search(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
-            if not json_match:
-                logger.error("未找到有效的 JSON 数据，原始消息：%s", message)
-                raise Exception("未找到有效的 JSON 数据")
+            # 如果输入是字符串，尝试提取 JSON
+            if isinstance(message, str):
+                json_match = re.search(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
+                if not json_match:
+                    logger.error("消息中未找到 JSON 数据")
+                    raise ValueError("消息中未找到 JSON 数据")
+                json_str = json_match.group(1).strip()
+                logger.info(f"提取到的 JSON 字符串: {json_str}")
+                data = json.loads(json_str)
+            else:
+                data = message
             
-            json_str = json_match.group(1).strip()
-            logger.info("提取的 JSON 数据: %s", json_str)
-            
-            data = json.loads(json_str)
-            logger.info("解析后的数据: %s", data)
-            
-            # 验证必要字段
-            required_fields = ['entry_date', 'tracking_number', 'phone', 'platform', 'warehouse', 'products']
-            missing_fields = [field for field in required_fields if field not in data]
-            if missing_fields:
-                raise Exception(f"JSON 数据缺少必要字段: {', '.join(missing_fields)}")
-            
-            # 使用 InventoryManager 写入记录
-            success_count = 0
-            total_products = len(data['products'])
-            
+            logger.info(f"待验证的数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
+
+            # 验证数据完整性
+            if not self._validate_inventory_data(data):
+                raise ValueError("数据不完整或格式错误")
+
+            # 遍历所有商品，为每个商品创建一条记录
+            success = True
             for product in data['products']:
+                # 转换数据格式以匹配 inventory 表的结构
                 inventory_data = {
                     '入库日期': data['entry_date'],
                     '快递单号': data['tracking_number'],
@@ -304,25 +371,77 @@ JSON 数据结构示例：
                     '仓库分类': data['warehouse']['category'],
                     '仓库地址': data['warehouse']['address']
                 }
-                logger.info("准备写入数据: %s", inventory_data)
-                
-                if self.inventory_manager.add_inventory(inventory_data):
-                    success_count += 1
-                    logger.info("成功写入商品记录: %s", product['name'])
-                else:
-                    logger.error("写入商品记录失败: %s", product['name'])
-            
-            if success_count < total_products:
-                raise Exception(f"部分商品写入失败: 成功 {success_count}/{total_products}")
-            
-            logger.info("所有商品记录写入成功: %d/%d", success_count, total_products)
-                
+
+                # 写入数据库
+                try:
+                    if not self.inventory_manager.add_inventory(inventory_data):
+                        success = False
+                        logger.error(f"写入商品 {product['name']} 的记录失败")
+                except Exception as e:
+                    success = False
+                    logger.error(f"写入商品 {product['name']} 的记录时发生错误: {str(e)}")
+
+            if success:
+                logger.info("所有入库记录已成功写入")
+            else:
+                raise Exception("部分或全部记录写入失败")
+
         except json.JSONDecodeError as e:
-            logger.error("JSON 解析失败: %s", str(e), exc_info=True)
-            raise Exception(f"JSON 解析失败: {str(e)}")
+            logger.error(f"JSON 解析错误: {str(e)}")
+            raise
         except Exception as e:
-            logger.error("解析或写入入库信息失败: %s", str(e), exc_info=True)
-            raise Exception(str(e))
+            logger.error(f"处理入库记录时发生错误: {str(e)}")
+            raise
+
+    def _validate_inventory_data(self, data: dict) -> bool:
+        """验证库存数据的完整性"""
+        try:
+            required_fields = {
+                'entry_date': str,
+                'tracking_number': str,
+                'phone': str,
+                'platform': str,
+                'warehouse': dict,
+                'products': list
+            }
+            
+            # 检查所有必需字段是否存在且不为空
+            for field, field_type in required_fields.items():
+                if field not in data:
+                    logger.info(f"缺少必要字段: {field}")
+                    return False
+                if not isinstance(data[field], field_type):
+                    logger.info(f"字段 {field} 类型错误")
+                    return False
+                # 检查字符串字段是否为空
+                if field_type == str and not data[field].strip():
+                    logger.info(f"字段 {field} 为空")
+                    return False
+                
+            # 验证 warehouse 字段
+            warehouse_fields = {'name', 'category', 'address'}
+            for field in warehouse_fields:
+                if field not in data['warehouse'] or not data['warehouse'][field].strip():
+                    logger.info(f"warehouse 字段 {field} 缺失或为空")
+                    return False
+            
+            # 验证 products 字段
+            if not data['products']:
+                logger.info("products 列表为空")
+                return False
+            
+            product_fields = {'name', 'quantity', 'price'}
+            for product in data['products']:
+                for field in product_fields:
+                    if field not in product or not str(product[field]).strip():
+                        logger.info(f"product 字段 {field} 缺失或为空")
+                        return False
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"数据验证过程中发生错误: {str(e)}")
+            return False
 
 
 # 使用示例
