@@ -7,6 +7,7 @@ from lark_oapi import Client
 from config import FEISHU_CONFIG
 from deepseek_chat import DeepSeekChat
 import asyncio
+import re
 
 # 设置日志
 logging.basicConfig(
@@ -129,13 +130,15 @@ class MessageProcessor:
                                 # Get AI response
                                 ai_response = await self.deepseek.chat(original_text, sender_open_id)
                                 
+                                # 提取用户可读的消息（去除JSON部分）
+                                user_message = self._extract_user_message(ai_response)
+                                
                                 # For group chats, mention the sender
                                 if chat_type == "group":
-                                    # 使用 user_id 来 @ 用户
-                                    ai_response = f"<at user_id=\"{sender_open_id}\"></at>\n{ai_response}"
+                                    user_message = f"<at user_id=\"{sender_open_id}\"></at>\n{user_message}"
                                 
                                 # Send AI response back
-                                if self.send_message(receive_id, ai_response, chat_type):
+                                if self.send_message(receive_id, user_message, chat_type):
                                     logger.info("AI reply sent successfully")
                                 else:
                                     logger.error("Failed to send AI reply")
@@ -158,6 +161,14 @@ class MessageProcessor:
                 # 添加短暂延迟，避免在错误情况下的快速循环
                 time.sleep(0.5)
                 continue
+
+    def _extract_user_message(self, ai_response: str) -> str:
+        """从AI响应中提取用户可读的消息部分"""
+        # 移除 JSON 部分
+        message = re.sub(r'<JSON>.*?</JSON>', '', ai_response, flags=re.DOTALL)
+        # 清理多余的空行
+        message = '\n'.join(line for line in message.splitlines() if line.strip())
+        return message.strip()
 
 if __name__ == "__main__":
     processor = MessageProcessor(

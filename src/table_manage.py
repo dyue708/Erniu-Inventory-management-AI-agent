@@ -43,9 +43,10 @@ class WarehouseManager(BaseTableManager):
 
 class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
-    COLUMNS = ['入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '入库数量', '入库单价', '存放位置']
+    COLUMNS = ['入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '入库数量', '入库单价', 
+               '仓库名', '仓库分类', '仓库地址']
 
-    def add_inventory(self, data: dict) -> None:
+    def add_inventory(self, data: dict) -> bool:
         """添加库存记录"""
         try:
             # 按照正确的列顺序构造新数据行
@@ -54,20 +55,25 @@ class InventoryManager(BaseTableManager):
                 data.get('快递单号', ''),
                 data.get('快递手机号', ''),
                 data.get('采购平台', ''),
-                data.get('商品名称', ''),  # 添加商品名称列
+                data.get('商品名称', ''),
                 data.get('入库数量', ''),
                 data.get('入库单价', ''),
-                data.get('存放位置', '')
+                data.get('仓库名', ''),
+                data.get('仓库分类', ''),
+                data.get('仓库地址', '')
             ]]
             
             # 写入表格
-            self.sheet_client.write_sheet(
+            response = self.sheet_client.write_sheet(
                 table_name=self.TABLE_NAME,
                 values=new_data
             )
+            # 飞书API返回 None 或 code=0 都表示成功
+            return response is None or (isinstance(response, dict) and response.get('code') == 0)
+            
         except Exception as e:
             print(f"添加库存记录失败: {e}")
-            raise
+            return False
 
 def handle_warehouse_operations():
     warehouse_manager = WarehouseManager()
