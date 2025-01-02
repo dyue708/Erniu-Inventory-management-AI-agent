@@ -1,6 +1,7 @@
 import pandas as pd
 from config import FEISHU_CONFIG
 from feishu_sheet import FeishuSheet
+from datetime import datetime
 
 class BaseTableManager:
     def __init__(self):
@@ -43,12 +44,17 @@ class WarehouseManager(BaseTableManager):
 
 class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
-    COLUMNS = ['入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '入库数量', '入库单价', 
-               '仓库名', '仓库分类', '仓库地址']
+    COLUMNS = [
+        '入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '入库数量', '入库单价', 
+        '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间'
+    ]
 
     def add_inventory(self, data: dict) -> bool:
         """添加库存记录"""
         try:
+            # 获取当前时间
+            current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            
             # 按照正确的列顺序构造新数据行
             new_data = [[
                 data.get('入库日期', ''),
@@ -60,7 +66,9 @@ class InventoryManager(BaseTableManager):
                 data.get('入库单价', ''),
                 data.get('仓库名', ''),
                 data.get('仓库分类', ''),
-                data.get('仓库地址', '')
+                data.get('仓库地址', ''),
+                data.get('操作者ID', ''),
+                current_time
             ]]
             
             # 写入表格

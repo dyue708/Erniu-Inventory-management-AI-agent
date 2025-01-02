@@ -35,6 +35,7 @@ class DeepSeekChat:
 2. 将信息格式化为JSON
 3. 检查是否所有必要信息都已收集
 4. 如果信息完整，返回完整的JSON；如果不完整，返回已收集的信息并友好询问缺失信息
+5. 对话内没有给的信息 不要猜测，一定需要确认
 
 必要的信息字段包括：
 {
@@ -78,6 +79,7 @@ class DeepSeekChat:
         self.max_history = DEEPSEEK_CONFIG.get("MAX_HISTORY", 10)
         self.inventory_manager = InventoryManager()
         self.current_inventory_data = {}  # 存储当前收集的信息
+        self.current_user_id = None  # 初始化 current_user_id
 
     def _get_warehouses(self) -> pd.DataFrame:
         """获取仓库信息"""
@@ -134,7 +136,9 @@ class DeepSeekChat:
         print("=" * 50)
 
     async def chat(self, message: str, user_id: str) -> str:
+        """处理用户消息并返回回复"""
         try:
+            self.current_user_id = user_id  # 设置当前用户ID
             # 初始化 prompt 为系统默认提示词
             prompt = self.system_prompt
 
@@ -270,7 +274,9 @@ class DeepSeekChat:
             
         except Exception as e:
             raise Exception(f"与 DeepSeek 通信时发生错误: {str(e)}")
-            
+        finally:
+            self.current_user_id = None  # 清理当前用户ID
+
     def clear_session(self, session_id: str) -> None:
         """清除指定会话的上下文历史"""
         if session_id in self.conversations:
@@ -337,54 +343,59 @@ class DeepSeekChat:
     def _write_inventory_record(self, message: str) -> None:
         """解析入库信息并写入库存明细表"""
         try:
-            # 如果输入是字符串，尝试提取 JSON
+            # 添加用户ID作为写入记录的一部分
             if isinstance(message, str):
                 json_match = re.search(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
                 if not json_match:
                     logger.error("消息中未找到 JSON 数据")
                     raise ValueError("消息中未找到 JSON 数据")
                 json_str = json_match.group(1).strip()
-                logger.info(f"提取到的 JSON 字符串: {json_str}")
                 data = json.loads(json_str)
-            else:
-                data = message
-            
-            logger.info(f"待验证的数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
+                
+                # 添加写入时间和操作用户标记
+                data['write_timestamp'] = datetime.now().isoformat()
+                
+                # 直接使用用户 ID，不添加 XML 标记
+                operator_id = self.current_user_id
+                data['operator_id'] = operator_id
+                
+                logger.info(f"待验证的数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
 
-            # 验证数据完整性
-            if not self._validate_inventory_data(data):
-                raise ValueError("数据不完整或格式错误")
+                # 验证数据完整性
+                if not self._validate_inventory_data(data):
+                    raise ValueError("数据不完整或格式错误")
 
-            # 遍历所有商品，为每个商品创建一条记录
-            success = True
-            for product in data['products']:
-                # 转换数据格式以匹配 inventory 表的结构
-                inventory_data = {
-                    '入库日期': data['entry_date'],
-                    '快递单号': data['tracking_number'],
-                    '快递手机号': data['phone'],
-                    '采购平台': data['platform'],
-                    '商品名称': product['name'],
-                    '入库数量': product['quantity'],
-                    '入库单价': product['price'],
-                    '仓库名': data['warehouse']['name'],
-                    '仓库分类': data['warehouse']['category'],
-                    '仓库地址': data['warehouse']['address']
-                }
+                # 遍历所有商品，为每个商品创建一条记录
+                success = True
+                for product in data['products']:
+                    # 转换数据格式以匹配 inventory 表的结构
+                    inventory_data = {
+                        '入库日期': data['entry_date'],
+                        '快递单号': data['tracking_number'],
+                        '快递手机号': data['phone'],
+                        '采购平台': data['platform'],
+                        '商品名称': product['name'],
+                        '入库数量': product['quantity'],
+                        '入库单价': product['price'],
+                        '仓库名': data['warehouse']['name'],
+                        '仓库分类': data['warehouse']['category'],
+                        '仓库地址': data['warehouse']['address'],
+                        '操作者ID': operator_id,  # 直接使用原始用户 ID
+                    }
 
-                # 写入数据库
-                try:
-                    if not self.inventory_manager.add_inventory(inventory_data):
+                    # 写入数据库
+                    try:
+                        if not self.inventory_manager.add_inventory(inventory_data):
+                            success = False
+                            logger.error(f"写入商品 {product['name']} 的记录失败")
+                    except Exception as e:
                         success = False
-                        logger.error(f"写入商品 {product['name']} 的记录失败")
-                except Exception as e:
-                    success = False
-                    logger.error(f"写入商品 {product['name']} 的记录时发生错误: {str(e)}")
+                        logger.error(f"写入商品 {product['name']} 的记录时发生错误: {str(e)}")
 
-            if success:
-                logger.info("所有入库记录已成功写入")
-            else:
-                raise Exception("部分或全部记录写入失败")
+                if success:
+                    logger.info("所有入库记录已成功写入")
+                else:
+                    raise Exception("部分或全部记录写入失败")
 
         except json.JSONDecodeError as e:
             logger.error(f"JSON 解析错误: {str(e)}")
