@@ -129,6 +129,11 @@ class MessageProcessor:
                                 # Get AI response
                                 ai_response = await self.deepseek.chat(original_text, sender_open_id)
                                 
+                                # For group chats, mention the sender
+                                if chat_type == "group":
+                                    # 使用 user_id 来 @ 用户
+                                    ai_response = f"<at user_id=\"{sender_open_id}\"></at>\n{ai_response}"
+                                
                                 # Send AI response back
                                 if self.send_message(receive_id, ai_response, chat_type):
                                     logger.info("AI reply sent successfully")
