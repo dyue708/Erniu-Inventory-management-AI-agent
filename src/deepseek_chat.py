@@ -35,17 +35,17 @@ class DeepSeekChat:
 2. 将信息格式化为JSON
 3. 检查是否所有必要信息都已收集
 4. 如果信息完整，返回完整的JSON；如果不完整，返回已收集的信息并友好询问缺失信息
-5. 对话内没有给的信息 不要猜测，一定需要确认
+5. 对话内没有给的信息需要确认
 
 必要的信息字段包括：
 {
     "entry_date": "入库日期（YYYY-MM-DD格式，默认今天）",
-    "tracking_number": "快递单号",
+    "tracking_number": "快递单号", 
     "phone": "手机号",
     "platform": "采购平台",
     "warehouse": {
         "name": "仓库名",
-        "category": "仓库分类",
+        "category": "仓库分类", 
         "address": "仓库地址"
     },
     "products": [
