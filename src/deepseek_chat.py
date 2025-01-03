@@ -6,7 +6,7 @@ import asyncio
 from feishu_sheet import FeishuSheet
 import re
 from datetime import datetime
-from table_manage import InventoryManager, WarehouseManager
+from table_manage import InventoryManager, WarehouseManager,ProductManager
 import pandas as pd
 import httpx
 
@@ -25,17 +25,12 @@ class DeepSeekChat:
         
         # 获取仓库和商品信息
         self.warehouse_manager = WarehouseManager()
+        self.product_manager = ProductManager()
         self.warehouses = self._get_warehouses()
+        self.products = self._get_products()
         
-        # 修改系统提示词
-        base_prompt = """你是一个出入库管理助手。你需要帮助收集完整的入库信息，并以JSON格式返回。
-
-每次对话你都需要：
-1. 分析用户输入，提取相关信息
-2. 将信息格式化为JSON
-3. 检查是否所有必要信息都已收集
-4. 如果信息完整，返回完整的JSON；如果不完整，返回已收集的信息并友好询问缺失信息
-5. 确认已经获得所有信息后入库，不要猜测没有的信息
+        # 基础系统提示词
+        self.system_prompt = """你是一个出入库管理助手。你需要帮助收集完整的入库信息，并以JSON格式返回。
 
 必要的信息字段包括：
 {
@@ -74,14 +69,12 @@ class DeepSeekChat:
 {当前已收集的JSON数据}
 </JSON>
 请继续提供：[缺失的字段列表]"""
-        
-        self.system_prompt = base_prompt
 
         self.conversations = {}
         self.max_history = DEEPSEEK_CONFIG.get("MAX_HISTORY", 10)
         self.inventory_manager = InventoryManager()
-        self.current_inventory_data = {}  # 存储当前收集的信息
-        self.current_user_id = None  # 初始化 current_user_id
+        self.current_inventory_data = {}
+        self.current_user_id = None
 
     def _get_warehouses(self) -> pd.DataFrame:
         """获取仓库信息"""
@@ -89,6 +82,14 @@ class DeepSeekChat:
             return self.warehouse_manager.get_data()
         except Exception as e:
             logger.error(f"获取仓库信息失败: {str(e)}")
+            return pd.DataFrame()
+
+    def _get_products(self) -> pd.DataFrame:
+        """获取商品信息"""
+        try:
+            return self.product_manager.get_data()
+        except Exception as e:
+            logger.error(f"获取商品信息失败: {str(e)}")
             return pd.DataFrame()
 
     def _format_warehouse_info(self) -> str:
@@ -104,6 +105,16 @@ class DeepSeekChat:
                 f"  仓库地址: {row['仓库地址']}\n"
             )
         return warehouse_str
+
+    def _format_product_info(self) -> str:
+        """格式化商品信息为字符串"""
+        if self.products.empty:
+            return "暂无可用商品信息"
+        
+        product_str = "可用商品列表：\n"
+        for _, row in self.products.iterrows():
+            product_str += f"- {row['商品名称']}\n"
+        return product_str
 
     def _validate_location(self, location: str) -> bool:
         """验证存放位置是否有效"""
@@ -140,75 +151,32 @@ class DeepSeekChat:
     async def chat(self, message: str, user_id: str) -> str:
         """处理用户消息并返回回复"""
         try:
-            self.current_user_id = user_id  # 设置当前用户ID
-            # 初始化 prompt 为系统默认提示词
-            prompt = self.system_prompt
-
-            # 如果是入库指令，使用特定的提示词
-            if "入库" in message:
-                prompt = f"""请帮助收集完整的入库信息。必须包含以下字段：
-                - entry_date: 入库日期（YYYY-MM-DD格式）
-                - tracking_number: 快递单号
-                - phone: 手机号
-                - platform: 采购平台
-                - warehouse: 包含 name（仓库名）, category（仓库分类）, address（仓库地址）的对象
-                - products: 商品数组，每个商品包含：
-                    - name: 商品名称
-                    - quantity: 纯数字格式的数量（不要包含"个"、"瓶"等单位）
-                    - price: 纯数字格式的单价（不要包含"元"、"¥"等单位）
-
-只有在收集到所有必要信息后，才按以下格式输出：
-<JSON>
-{{
-    "entry_date": "YYYY-MM-DD",
-    "tracking_number": "xxx",
-    "phone": "xxx",
-    "platform": "xxx",
-    "warehouse": {{
-        "name": "xxx",
-        "category": "xxx",
-        "address": "xxx"
-    }},
-    "products": [
-        {{
-            "name": "商品1",
-            "quantity": 1,  // 示例：纯数字，不带单位
-            "price": 99.9   // 示例：纯数字，不带单位
-        }},
-        {{
-            "name": "商品2",
-            "quantity": 2,  // 示例：纯数字，不带单位
-            "price": 88.8   // 示例：纯数字，不带单位
-        }}
-    ]
-}}
-</JSON>
-
-注意事项：
-1. quantity 和 price 必须是纯数字，不能包含任何单位
-2. 日期必须是 YYYY-MM-DD 格式
-3. 所有字段都不能为空
-
-如果信息不完整，请友好地询问缺失的信息，不要输出JSON格式。
-收集完整后，用中文总结入库信息。"""
+            self.current_user_id = user_id
+            # 使用统一的系统提示词，不再需要特别判断"入库"指令
+            today = datetime.now().strftime("%Y-%m-%d")
+            warehouse_info = self._format_warehouse_info()
+            product_info = self._format_product_info()
+            final_system_prompt = f"{self.system_prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}\n\n相关商品信息：\n{product_info}"
 
             # 确保会话存在
             self.create_session(user_id)
             conversation = self.get_conversation(user_id)
-            
+            # 生成最终的系统提示词
+            today = datetime.now().strftime("%Y-%m-%d")
+            warehouse_info = self._format_warehouse_info()
+            product_info = self._format_product_info()
+            final_system_prompt = f"{self.system_prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}\n\n相关商品信息：\n{product_info}"
             # 打印当前上下文信息
             print("\n=== Current Context ===")
             print(f"Session ID: {user_id}")
-            print(f"System Prompt: {prompt}")
+            print(f"System Prompt: {final_system_prompt}")  # 使用最终版的系统提示词
             print(f"History Length: {len(conversation)}")
+            print(f"Current Message: {message}")  # 添加当前消息内容
             print("=" * 50)
 
             # 构建消息历史
             messages = []
             # 使用传入的 system_prompt，如果没有则使用默认的
-            today = datetime.now().strftime("%Y-%m-%d")
-            warehouse_info = self._format_warehouse_info()
-            final_system_prompt = f"{prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}"
             if final_system_prompt:
                 messages.append({"role": "system", "content": final_system_prompt})
             
@@ -216,10 +184,7 @@ class DeepSeekChat:
             messages.extend(conversation)
             
             # 添加用户消息
-            enhanced_message = message
-            
-            # 添加当前用户消息
-            messages.append({"role": "user", "content": enhanced_message})
+            messages.append({"role": "user", "content": message})
             
             try:
                 async with httpx.AsyncClient() as client:

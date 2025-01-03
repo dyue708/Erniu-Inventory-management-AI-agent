@@ -219,12 +219,52 @@ class InventoryManager(BaseTableManager):
             print(f"添加库存记录失败: {e}")
             return False
 
+class ProductManager(BaseTableManager):
+    TABLE_NAME = "product"
+    COLUMNS = ['商品名称', '商品分类', '商品规格', '商品单位', '商品备注']
+
+    def get_data(self) -> pd.DataFrame:
+        """查看商品数据"""
+        try:
+            config = self.bitable_config[self.TABLE_NAME]
+            data = self.sheet_client.read_bitable(
+                app_token=config["app_token"],
+                table_id=config["table_id"]
+            )
+            
+            if not data or not data.get("items"):
+                return pd.DataFrame()
+            
+            # 转换多维表格数据为DataFrame格式
+            records = []
+            for item in data["items"]:
+                fields = item["fields"]
+                records.append([
+                    fields.get("商品名称", ""),
+                    fields.get("商品分类", ""),
+                    fields.get("商品规格", ""),
+                    fields.get("商品单位", ""),
+                    fields.get("商品备注", "")
+                ])
+            
+            return pd.DataFrame(records, columns=self.COLUMNS)
+        except Exception as e:
+            print(f"读取商品数据失败: {e}")
+            return pd.DataFrame()
+
 def main():
     """测试函数：读取并显示库存表和仓库表数据"""
     try:
         # 初始化管理器
         warehouse_mgr = WarehouseManager()
         inventory_mgr = InventoryManager()
+        product_mgr = ProductManager()  # 添加商品管理器实例
+
+        # 读取商品数据
+        print("\n=== 商品表数据 ===")
+        product_df = product_mgr.get_data()
+        print("列名:", product_df.columns.tolist())
+        print(product_df)
 
         # 读取仓库数据
         print("\n=== 仓库表数据 ===")
