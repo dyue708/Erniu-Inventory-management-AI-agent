@@ -31,6 +31,26 @@ FEISHU_CONFIG = {
             "spreadsheet_token": os.getenv("FEISHU_SHEET_TOKEN"),
             "sheet_id": os.getenv("INVENTORY_SHEET_ID")
         }
+    },
+    
+    # 多维表格配置
+    "BITABLES": {
+        "warehouse": {  # 仓库管理表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
+            "table_id": os.getenv("WAREHOUSE_BITABLE_ID")
+        },
+        "product": {    # 商品管理表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"), 
+            "table_id": os.getenv("PRODUCT_BITABLE_ID")
+        },
+        "category": {   # 商品分类管理表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
+            "table_id": os.getenv("CATEGORY_BITABLE_ID")
+        },
+        "inventory": {  # 库存明细表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
+            "table_id": os.getenv("INVENTORY_BITABLE_ID")
+        }
     }
 }
 

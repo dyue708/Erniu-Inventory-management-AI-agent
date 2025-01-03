@@ -35,7 +35,7 @@ class DeepSeekChat:
 2. 将信息格式化为JSON
 3. 检查是否所有必要信息都已收集
 4. 如果信息完整，返回完整的JSON；如果不完整，返回已收集的信息并友好询问缺失信息
-5. 对话内没有给的信息需要确认
+5. 确认已经获得所有信息后入库，不要猜测没有的信息
 
 必要的信息字段包括：
 {
@@ -51,11 +51,16 @@ class DeepSeekChat:
     "products": [
         {
             "name": "商品名称",
-            "quantity": "数量",
-            "price": "单价"
+            "quantity": 数字类型的数量（不要包含单位）,
+            "price": 数字类型的单价（不要包含单位）
         }
     ]
 }
+
+注意事项：
+1. quantity 和 price 必须是纯数字，不能包含单位
+2. 日期必须是 YYYY-MM-DD 格式
+3. 所有字段都不能为空
 
 请按以下格式返回数据：
 1. 如果信息完整：
@@ -147,7 +152,10 @@ class DeepSeekChat:
                 - phone: 手机号
                 - platform: 采购平台
                 - warehouse: 包含 name（仓库名）, category（仓库分类）, address（仓库地址）的对象
-                - products: 商品数组，每个商品包含 name（商品名）, quantity（数量）, price（单价）
+                - products: 商品数组，每个商品包含：
+                    - name: 商品名称
+                    - quantity: 纯数字格式的数量（不要包含"个"、"瓶"等单位）
+                    - price: 纯数字格式的单价（不要包含"元"、"¥"等单位）
 
 只有在收集到所有必要信息后，才按以下格式输出：
 <JSON>
@@ -164,17 +172,22 @@ class DeepSeekChat:
     "products": [
         {{
             "name": "商品1",
-            "quantity": 数量,
-            "price": 单价
+            "quantity": 1,  // 示例：纯数字，不带单位
+            "price": 99.9   // 示例：纯数字，不带单位
         }},
         {{
             "name": "商品2",
-            "quantity": 数量,
-            "price": 单价
+            "quantity": 2,  // 示例：纯数字，不带单位
+            "price": 88.8   // 示例：纯数字，不带单位
         }}
     ]
 }}
 </JSON>
+
+注意事项：
+1. quantity 和 price 必须是纯数字，不能包含任何单位
+2. 日期必须是 YYYY-MM-DD 格式
+3. 所有字段都不能为空
 
 如果信息不完整，请友好地询问缺失的信息，不要输出JSON格式。
 收集完整后，用中文总结入库信息。"""
@@ -355,9 +368,7 @@ class DeepSeekChat:
                 data = json.loads(json_str)
                 
                 # 添加写入时间和操作用户标记
-                data['write_timestamp'] = datetime.now().isoformat()
-                
-                # 直接使用用户 ID，不添加 XML 标记
+                data['write_timestamp'] = int(datetime.now().timestamp())
                 operator_id = self.current_user_id
                 data['operator_id'] = operator_id
                 
@@ -370,9 +381,15 @@ class DeepSeekChat:
                 # 遍历所有商品，为每个商品创建一条记录
                 success = True
                 for product in data['products']:
+                    # 获取当前时间的 Unix timestamp（毫秒级）
+                    current_timestamp = int(datetime.now().timestamp() * 1000)
+                    
+                    # 将入库日期转换为 Unix timestamp（毫秒级）
+                    entry_date = int(datetime.strptime(data['entry_date'], '%Y-%m-%d').timestamp() * 1000)
+                    
                     # 转换数据格式以匹配 inventory 表的结构
                     inventory_data = {
-                        '入库日期': data['entry_date'],
+                        '入库日期': entry_date,  # 毫秒级时间戳
                         '快递单号': data['tracking_number'],
                         '快递手机号': data['phone'],
                         '采购平台': data['platform'],
@@ -382,7 +399,8 @@ class DeepSeekChat:
                         '仓库名': data['warehouse']['name'],
                         '仓库分类': data['warehouse']['category'],
                         '仓库地址': data['warehouse']['address'],
-                        '操作者ID': operator_id,  # 直接使用原始用户 ID
+                        '操作者ID': [{"id": operator_id}],
+                        '操作时间': current_timestamp,  # 毫秒级时间戳
                     }
 
                     # 写入数据库
