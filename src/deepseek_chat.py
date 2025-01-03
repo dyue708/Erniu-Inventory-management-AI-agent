@@ -206,17 +206,17 @@ class DeepSeekChat:
             # 构建消息历史
             messages = []
             # 使用传入的 system_prompt，如果没有则使用默认的
-            final_system_prompt = prompt
+            today = datetime.now().strftime("%Y-%m-%d")
+            warehouse_info = self._format_warehouse_info()
+            final_system_prompt = f"{prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}"
             if final_system_prompt:
                 messages.append({"role": "system", "content": final_system_prompt})
             
             # 添加历史消息
             messages.extend(conversation)
             
-            # 在用户消息中添加日期和仓库信息
-            today = datetime.now().strftime("%Y-%m-%d")
-            warehouse_info = self._format_warehouse_info()
-            enhanced_message = f"今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}\n\n{message}"
+            # 添加用户消息
+            enhanced_message = message
             
             # 添加当前用户消息
             messages.append({"role": "user", "content": enhanced_message})
