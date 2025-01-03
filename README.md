@@ -80,22 +80,21 @@ https://example.feishu.cn/sheets/xxxxxxxxxxxxxxxxxxxxxx?sheet=xxxxxx
 4. 安装依赖：`pip install -r requirements.txt`
 5. 配置环境变量：
    - 复制 `.env.sample` 为 `.env`
-   - 配置飞书应用信息:
+   - 根据 `.env.sample` 中的示例填写相应配置:
      ```
-     FEISHU_APP_ID=your_app_id
-     FEISHU_APP_SECRET=your_app_secret
+     FEISHU_APP_ID=cli_a7******76100d
+     FEISHU_APP_SECRET=BZYg***********************pjGG
+     FEISHU_SHEET_TOKEN=GYw9s*************6cKgnYn5e
+     WAREHOUSE_SHEET_ID=ad8f**
+     PRODUCT_SHEET_ID=8Fis**
+     CATEGORY_SHEET_ID=tt7Q**
+     INVENTORY_SHEET_ID=aX0S**
+     FEISHU_VERIFICATION_TOKEN=eCBE********************Wgd4
+     FEISHU_ENCRYPT_KEY=cMt1******************6voTyf
+     DEEPSEEK_API_KEY=sk-6d0*********************004a
+     DEEPSEEK_BASE_URL="https://api.deepseek.com"
+     DEEPSEEK_MODEL="deepseek-chat"
      ```
-   - 配置飞书表格信息:
-     ```
-     FEISHU_SHEET_TOKEN=your_spreadsheet_token
-     PRODUCT_SHEET_ID=product_sheet_id
-     WAREHOUSE_SHEET_ID=warehouse_sheet_id
-     INVENTORY_SHEET_ID=inventory_sheet_id
-     ```
-   - 配置深度求索API信息:
-     ```
-     DEEPSEEK_API_KEY=your_api_key
-     DEEPSEEK_BASE_URL=api_base_url
      ```
 
 ## 使用
