@@ -29,7 +29,7 @@ class DeepSeekChat:
         self.warehouses = self._get_warehouses()
         self.products = self._get_products()
         
-        # 基础系统提示词
+        # 修改基础系统提示词
         self.system_prompt = """你是一个出入库管理助手。你需要帮助收集完整的入库信息，并以JSON格式返回。
 
 必要的信息字段包括：
@@ -56,15 +56,29 @@ class DeepSeekChat:
 1. quantity 和 price 必须是纯数字，不能包含单位
 2. 日期必须是 YYYY-MM-DD 格式
 3. 所有字段都不能为空
+4. 商品名称必须与商品列表中的名称完全匹配，如果用户提供的商品名称不在列表中：
+   - 告知用户该商品不在系统中
+   - 展示可用的商品列表
+   - 请用户确认是否输入错误或选择正确的商品名称
+5. 如果提交信息不足以确定商品名称（例如用户只提供了商品分类，但该分类下有多个商品），需要：
+   - 告知用户需要更具体的商品信息
+   - 展示该分类下的所有商品列表
+   - 请用户明确选择具体的商品名称
 
 请按以下格式返回数据：
-1. 如果信息完整：
+1. 如果信息完整且商品名称匹配：
 <JSON>
 {完整的JSON数据}
 </JSON>
 入库信息已收集完整，我已记录。
 
-2. 如果信息不完整：
+2. 如果商品名称不匹配：
+抱歉，商品"{用户输入的商品名称}"不在系统中。
+以下是可用的商品列表：
+{可用商品列表}
+请确认商品名称是否输入错误，或从以上列表中选择正确的商品名称。
+
+3. 如果其他信息不完整：
 <JSON>
 {当前已收集的JSON数据}
 </JSON>
@@ -113,7 +127,16 @@ class DeepSeekChat:
         
         product_str = "可用商品列表：\n"
         for _, row in self.products.iterrows():
-            product_str += f"- {row['商品名称']}\n"
+            product_str += (
+                f"- 商品名称: {row['商品名称']}\n"
+                f"  商品分类: {row['商品分类']}\n"
+                f"  商品规格: {row['商品规格']}\n"
+                f"  商品单位: {row['商品单位']}\n"
+            )
+            # 只有当备注不为空时才添加备注信息
+            if pd.notna(row.get('商品备注')) and row['商品备注']:
+                product_str += f"  商品备注: {row['商品备注']}\n"
+            product_str += "\n"  # 在每个商品之间添加空行
         return product_str
 
     def _validate_location(self, location: str) -> bool:
