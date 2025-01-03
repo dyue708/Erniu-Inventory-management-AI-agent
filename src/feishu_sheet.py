@@ -125,3 +125,121 @@ class FeishuSheet:
         }}
     
         self._make_request("POST", url, headers, payload)
+
+    def read_bitable(self, app_token: str, table_id: str, page_size: int = 100, page_token: str = None) -> Dict:
+        """读取多维表格数据
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            page_size: 每页记录数，默认100
+            page_token: 分页标记，默认None
+            
+        Returns:
+            Dict: 包含表格数据和元信息的字典
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/records"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        params = {
+            "page_size": page_size
+        }
+        if page_token:
+            params["page_token"] = page_token
+            
+        data = self._make_request("GET", url, headers, params)
+        return data.get("data", {})
+
+    def write_bitable(self, app_token: str, table_id: str, records: List[Dict]) -> Dict:
+        """写入多维表格数据
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            records: 要写入的记录列表，每条记录为一个字典，格式如：
+                    [{"fields": {"字段名1": "值1", "字段名2": "值2"}}]
+            
+        Returns:
+            Dict: API 响应结果
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_create"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        payload = {
+            "records": records
+        }
+        
+        return self._make_request("POST", url, headers, payload)
+
+    def update_bitable(self, app_token: str, table_id: str, record_id: str, fields: Dict) -> Dict:
+        """更新多维表格中的记录
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            record_id: 记录 ID
+            fields: 要更新的字段，格式如：{"字段名1": "新值1"}
+            
+        Returns:
+            Dict: API 响应结果
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/records/{record_id}"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        payload = {
+            "fields": fields
+        }
+        
+        return self._make_request("PUT", url, headers, payload)
+
+def test_bitable():
+    """测试多维表格的读写功能"""
+    # 测试配置
+    from config import FEISHU_CONFIG
+    app_id = FEISHU_CONFIG["APP_ID"]
+    app_secret = FEISHU_CONFIG["APP_SECRET"]
+    app_token = "KuQabUcsVaQ6rosP5WvcX9denId"
+    table_id = "tblg1jHBG0icQM8w"
+    
+    # 初始化客户端
+    feishu = FeishuSheet(app_id=app_id, app_secret=app_secret)
+    
+    try:
+        # 测试读取
+        print("开始测试读取...")
+        read_result = feishu.read_bitable(
+            app_token=app_token,
+            table_id=table_id
+        )
+        print("读取结果:", read_result)
+        
+        # 测试写入
+        print("\n开始测试写入...")
+        test_records = [
+            {
+                "fields": {
+                    "文本": "这是一条测试数据"
+                }
+            }
+        ]
+        write_result = feishu.write_bitable(
+            app_token=app_token,
+            table_id=table_id,
+            records=test_records
+        )
+        print("写入结果:", write_result)
+        
+    except Exception as e:
+        print(f"测试过程中发生错误: {str(e)}")
+
+if __name__ == "__main__":
+    test_bitable()
