@@ -70,11 +70,8 @@ class DeepSeekChat:
 </JSON>
 请继续提供：[缺失的字段列表]"""
         
-        # 在系统提示词中添加今日日期和可用仓库信息
-        today = datetime.now().strftime("%Y-%m-%d")
-        warehouse_info = self._format_warehouse_info()
-        self.system_prompt = f"{base_prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}"
-        
+        self.system_prompt = base_prompt
+
         self.conversations = {}
         self.max_history = DEEPSEEK_CONFIG.get("MAX_HISTORY", 10)
         self.inventory_manager = InventoryManager()
@@ -203,8 +200,13 @@ class DeepSeekChat:
             # 添加历史消息
             messages.extend(conversation)
             
+            # 在用户消息中添加日期和仓库信息
+            today = datetime.now().strftime("%Y-%m-%d")
+            warehouse_info = self._format_warehouse_info()
+            enhanced_message = f"今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}\n\n{message}"
+            
             # 添加当前用户消息
-            messages.append({"role": "user", "content": message})
+            messages.append({"role": "user", "content": enhanced_message})
             
             try:
                 async with httpx.AsyncClient() as client:
