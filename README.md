@@ -52,11 +52,11 @@
 
 ## 飞书表格链接说明
 
-以下是飞书表格链接的解析示例：
-https://example.feishu.cn/sheets/xxxxxxxxxxxxxxxxxxxxxx?sheet=xxxxxx
+以下是飞书多维表格链接的解析示例：
+https://example.feishu.cn/base/xxxxxxxxxxxxxxxxxxxxxx/table/tblxxxxxxxxxxxxxx
 
-- 链接中的 `xxxxxxxxxxxxxxxxxxxxxx` 是文档的 spreadsheet_token
-- 链接中的 `xxxxxx` 是表格的 sheet_id
+- 链接中的 `xxxxxxxxxxxxxxxxxxxxxx` 是多维表格的 app_token
+- 链接中的 `tblxxxxxxxxxxxxxx` 是表格的 table_id
 
 ## Deepseek 配置
 
