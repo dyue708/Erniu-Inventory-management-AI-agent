@@ -32,12 +32,36 @@ class BaseTableManager:
             existing_columns = set(existing_fields.keys())
             desired_columns = set(self.COLUMNS)
 
+            # 检查是否需要添加新列
+            missing_columns = desired_columns - existing_columns
+            if missing_columns:
+                print(f"需要添加的列: {missing_columns}")
+                for column_name in missing_columns:
+                    field_config = {
+                        "field_name": column_name,
+                        "type": 1,  # 默认使用文本类型
+                    }
+                    
+                    self.sheet_client.create_bitable_field(
+                        app_token=config["app_token"],
+                        table_id=config["table_id"],
+                        field_config=field_config
+                    )
+                    print(f"已添加新列: {column_name}")
+
+            # 重新获取更新后的字段配置
+            fields = self.sheet_client.get_bitable_fields(
+                app_token=config["app_token"],
+                table_id=config["table_id"]
+            )
+
             # 定义字段类型映射
             field_types = {
                 # 库存表字段类型
                 "数量": 2,  # 数字类型
                 "单价": 2,  # 数字类型
                 "总价": 20,  # 公式类型
+                "变动数量": 20,  # 公式类型
                 "出入库日期": 5,  # 日期时间类型
                 "操作者ID": 11,  # 用户类型
                 "操作时间": 5,  # 日期时间类型
@@ -63,24 +87,8 @@ class BaseTableManager:
                     )
                     print(f"已将字段 '{field_name}' 更新为对应类型")
 
-            # 检查是否需要添加新列
-            missing_columns = desired_columns - existing_columns
-            if missing_columns:
-                print(f"需要添加的列: {missing_columns}")
-                for column_name in missing_columns:
-                    field_config = {
-                        "field_name": column_name,
-                        "type": 1,  # 默认使用文本类型
-                    }
-                    
-                    self.sheet_client.create_bitable_field(
-                        app_token=config["app_token"],
-                        table_id=config["table_id"],
-                        field_config=field_config
-                    )
-                    print(f"已添加新列: {column_name}")
-
             # 更新不匹配的列名
+            existing_columns = set(field["field_name"] for field in fields)
             if existing_columns != desired_columns:
                 print(f"警告: {self.TABLE_NAME} 表格列名不匹配")
                 print(f"期望的列名: {self.COLUMNS}")
@@ -177,7 +185,7 @@ class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
     COLUMNS = [
         '出入库日期', '快递单号', '快递手机号', '采购平台', '商品ID', '商品名称', '数量', '单价', 
-        '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间', '总价', '操作类型'
+        '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间', '总价', '变动数量', '操作类型'
     ]
 
     def add_inventory(self, data: dict) -> bool:
