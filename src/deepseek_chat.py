@@ -40,7 +40,7 @@ class DeepSeekChat:
     "数量": 数字类型的数量（不要包含单位）,
     "单价": 数字类型的单价（不要包含单位）,
     "仓库名": "仓库名称",
-    "仓库分类": "仓库分类",
+    "仓库备注": "仓库备注",
     "仓库地址": "仓库地址",
     "操作类型": "入库或出库"
 }
@@ -116,11 +116,10 @@ class DeepSeekChat:
         
         warehouse_str = ""
         for _, row in self.warehouses.iterrows():
-            warehouse_str += (
-                f"- 仓库名: {row['仓库名']}\n"
-                f"  仓库分类: {row['仓库分类']}\n" 
-                f"  仓库地址: {row['仓库地址']}\n"
-            )
+            warehouse_str += f"- 仓库名: {row['仓库名']}\n"
+            warehouse_str += f"  仓库地址: {row['仓库地址']}\n"
+            if pd.notna(row.get('仓库备注')) and row['仓库备注']:
+                warehouse_str += f"  仓库备注: {row['仓库备注']}\n"
         return warehouse_str
 
     def _format_product_info(self) -> str:
@@ -312,7 +311,6 @@ class DeepSeekChat:
                 'platform': '采购平台',
                 'warehouse': {
                     'name': '仓库名',
-                    'category': '仓库分类',
                     'address': '仓库地址'
                 },
                 'products': ['name', 'quantity', 'price']
@@ -403,7 +401,7 @@ class DeepSeekChat:
                 '数量': (int, float),
                 '单价': (int, float),
                 '仓库名': str,
-                '仓库分类': str,
+                '仓库备注': str,
                 '仓库地址': str,
                 '操作类型': str
             }

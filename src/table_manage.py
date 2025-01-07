@@ -127,7 +127,7 @@ class BaseTableManager:
 
 class WarehouseManager(BaseTableManager):
     TABLE_NAME = "warehouse"
-    COLUMNS = [ '仓库名', '仓库分类', '仓库地址']
+    COLUMNS = ['仓库名', '仓库备注', '仓库地址']
 
     def get_data(self) -> pd.DataFrame:
         """查看仓库数据"""
@@ -147,7 +147,7 @@ class WarehouseManager(BaseTableManager):
                 fields = item["fields"]
                 records.append([
                     fields.get("仓库名", ""),
-                    fields.get("仓库分类", ""),
+                    fields.get("仓库备注", ""),
                     fields.get("仓库地址", "")
                 ])
             
@@ -167,7 +167,7 @@ class WarehouseManager(BaseTableManager):
             new_record = [{
                 "fields": {
                     "仓库名": warehouse_name,
-                    "仓库分类": category,
+                    "仓库备注": category,
                     "仓库地址": address
                 }
             }]
@@ -185,7 +185,7 @@ class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
     COLUMNS = [
         '出入库日期', '快递单号', '快递手机号', '采购平台', '商品ID', '商品名称', '数量', '单价', 
-        '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间', '总价', '变动数量', '操作类型'
+        '仓库名', '仓库备注', '仓库地址', '操作者ID', '操作时间', '总价', '变动数量', '操作类型'
     ]
 
     def add_inventory(self, data: dict) -> bool:
@@ -211,7 +211,7 @@ class InventoryManager(BaseTableManager):
                     "数量": quantity,
                     "单价": price,
                     "仓库名": data.get('仓库名', ''),
-                    "仓库分类": data.get('仓库分类', ''),
+                    "仓库备注": data.get('仓库备注', ''),
                     "仓库地址": data.get('仓库地址', ''),
                     "操作者ID": data.get('操作者ID', ''),
                     "操作时间": data.get('操作时间', ''),
