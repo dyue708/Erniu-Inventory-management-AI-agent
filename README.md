@@ -104,8 +104,7 @@ https://example.feishu.cn/base/xxxxxxxxxxxxxxxxxxxxxx/table/tblxxxxxxxxxxxxxx
    - 机器人已添加到目标群组
    - 表格已正确授权给应用
    - 深度求索API key 有效且有足够额度
-   
-2. 运行程序：`python src/main_run.py`
+2. 运行程序：`python run.py`
 3. 程序会启动两个服务:
    - 消息存储服务：接收并存储飞书消息
    - 消息处理服务：处理库存相关指令
