@@ -176,7 +176,7 @@ class WarehouseManager(BaseTableManager):
 class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
     COLUMNS = [
-        '出入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '数量', '单价', 
+        '出入库日期', '快递单号', '快递手机号', '采购平台', '商品ID', '商品名称', '数量', '单价', 
         '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间', '总价', '操作类型'
     ]
 
@@ -198,6 +198,7 @@ class InventoryManager(BaseTableManager):
                     "快递单号": data.get('快递单号', ''),
                     "快递手机号": data.get('快递手机号', ''),
                     "采购平台": data.get('采购平台', ''),
+                    "商品ID": data.get('商品ID', ''),
                     "商品名称": data.get('商品名称', ''),
                     "数量": quantity,
                     "单价": price,
@@ -224,7 +225,7 @@ class InventoryManager(BaseTableManager):
 
 class ProductManager(BaseTableManager):
     TABLE_NAME = "product"
-    COLUMNS = ['商品名称', '商品分类', '商品规格', '商品单位', '商品备注']
+    COLUMNS = ['商品ID', '商品名称', '商品分类', '商品规格', '商品单位', '商品备注']
 
     def get_data(self) -> pd.DataFrame:
         """查看商品数据"""
@@ -243,6 +244,7 @@ class ProductManager(BaseTableManager):
             for item in data["items"]:
                 fields = item["fields"]
                 records.append([
+                    fields.get("商品ID", ""),
                     fields.get("商品名称", ""),
                     fields.get("商品分类", ""),
                     fields.get("商品规格", ""),

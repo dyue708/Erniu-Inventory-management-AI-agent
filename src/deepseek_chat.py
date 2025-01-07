@@ -35,6 +35,7 @@ class DeepSeekChat:
 必要的信息字段包括：
 {
     "出入库日期": "操作日期（YYYY-MM-DD格式，默认今天）",
+    "商品ID": "商品ID（文本格式）",
     "商品名称": "商品名称",
     "数量": 数字类型的数量（不要包含单位）,
     "单价": 数字类型的单价（不要包含单位）,
@@ -130,7 +131,8 @@ class DeepSeekChat:
         product_str = "可用商品列表：\n"
         for _, row in self.products.iterrows():
             product_str += (
-                f"- 商品名称: {row['商品名称']}\n"
+                f"- 商品ID: {row['商品ID']}\n"
+                f"  商品名称: {row['商品名称']}\n"
                 f"  商品分类: {row['商品分类']}\n"
                 f"  商品规格: {row['商品规格']}\n"
                 f"  商品单位: {row['商品单位']}\n"
@@ -396,6 +398,7 @@ class DeepSeekChat:
             # 必要字段列表
             required_fields = {
                 '出入库日期': str,
+                '商品ID': str,  # 确保商品ID为字符串类型
                 '商品名称': str,
                 '数量': (int, float),
                 '单价': (int, float),
@@ -411,6 +414,10 @@ class DeepSeekChat:
                     logger.info(f"缺少必要字段: {field}")
                     return False
                     
+                # 对于商品ID，确保它是字符串类型
+                if field == '商品ID':
+                    data[field] = str(data[field])  # 将商品ID转换为字符串
+                
                 if not isinstance(data[field], field_type):
                     if isinstance(field_type, tuple):
                         if not any(isinstance(data[field], t) for t in field_type):
