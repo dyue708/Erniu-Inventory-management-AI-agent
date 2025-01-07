@@ -401,8 +401,6 @@ class DeepSeekChat:
                 '数量': (int, float),
                 '单价': (int, float),
                 '仓库名': str,
-                '仓库备注': str,
-                '仓库地址': str,
                 '操作类型': str
             }
             
