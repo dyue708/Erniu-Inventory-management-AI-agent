@@ -1,9 +1,9 @@
 import threading
 import logging
 import asyncio
-from message_store_bot import FeishuBot
-from message_processor import MessageProcessor
-from config import FEISHU_CONFIG
+from src.message_store_bot import FeishuBot
+from src.message_processor import MessageProcessor
+from src.config import FEISHU_CONFIG
 import time
 
 # 设置日志
