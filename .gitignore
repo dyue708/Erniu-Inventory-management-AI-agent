@@ -3,6 +3,7 @@ venv/
 env/
 .env/
 .env
+.env personal
 myenv/
 myenv
 # 忽略所有 Python 字节码缓存

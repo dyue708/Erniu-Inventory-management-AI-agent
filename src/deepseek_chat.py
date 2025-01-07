@@ -30,37 +30,37 @@ class DeepSeekChat:
         self.products = self._get_products()
         
         # 修改基础系统提示词
-        self.system_prompt = """你是一个出入库管理助手。你需要帮助收集完整的入库信息，并以JSON格式返回。
+        self.system_prompt = """你是一个出入库管理助手。你需要帮助收集完整的出入库信息，并以JSON格式返回。
 
 必要的信息字段包括：
 {
-    "entry_date": "入库日期（YYYY-MM-DD格式，默认今天）",
-    "tracking_number": "快递单号", 
-    "phone": "手机号",
-    "platform": "采购平台",
-    "warehouse": {
-        "name": "仓库名",
-        "category": "仓库分类", 
-        "address": "仓库地址"
-    },
-    "products": [
-        {
-            "name": "商品名称",
-            "quantity": 数字类型的数量（不要包含单位）,
-            "price": 数字类型的单价（不要包含单位）
-        }
-    ]
+    "出入库日期": "操作日期（YYYY-MM-DD格式，默认今天）",
+    "商品名称": "商品名称",
+    "数量": 数字类型的数量（不要包含单位）,
+    "单价": 数字类型的单价（不要包含单位）,
+    "仓库名": "仓库名称",
+    "仓库分类": "仓库分类",
+    "仓库地址": "仓库地址",
+    "操作类型": "入库或出库"
+}
+
+可选信息字段包括：
+{
+    "快递单号": "快递单号（可选）", 
+    "快递手机号": "手机号（可选）",
+    "采购平台": "采购/销售平台（可选）"
 }
 
 注意事项：
-1. quantity 和 price 必须是纯数字，不能包含单位
+1. 数量和单价必须是纯数字，不能包含单位
 2. 日期必须是 YYYY-MM-DD 格式
-3. 所有字段都不能为空
-4. 商品名称必须与商品列表中的名称完全匹配，如果用户提供的商品名称不在列表中：
+3. 必要字段不能为空，可选字段可以为空
+4. 操作类型必须是"入库"或"出库"
+5. 商品名称必须与商品列表中的名称完全匹配，如果用户提供的商品名称不在列表中：
    - 告知用户该商品不在系统中
    - 展示可用的商品列表
    - 请用户确认是否输入错误或选择正确的商品名称
-5. 如果提交信息不足以确定商品名称（例如用户只提供了商品分类，但该分类下有多个商品），需要：
+6. 如果提交信息不足以确定商品名称（例如用户只提供了商品分类，但该分类下有多个商品），需要：
    - 告知用户需要更具体的商品信息
    - 展示该分类下的所有商品列表
    - 请用户明确选择具体的商品名称
@@ -70,8 +70,8 @@ class DeepSeekChat:
 <JSON>
 {完整的JSON数据}
 </JSON>
-入库信息已收集完整，我已记录。
-入库商品明细:
+{操作类型}信息已收集完整，我已记录。
+{操作类型}商品明细:
 {商品名称}: {数量}
 
 2. 如果商品名称不匹配：
@@ -346,9 +346,8 @@ class DeepSeekChat:
             return {'status': 'error', 'message': str(e)}
             
     def _write_inventory_record(self, message: str) -> None:
-        """解析入库信息并写入库存明细表"""
+        """解析出入库信息并写入库存明细表"""
         try:
-            # 添加用户ID作为写入记录的一部分
             if isinstance(message, str):
                 json_match = re.search(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
                 if not json_match:
@@ -358,9 +357,8 @@ class DeepSeekChat:
                 data = json.loads(json_str)
                 
                 # 添加写入时间和操作用户标记
-                data['write_timestamp'] = int(datetime.now().timestamp())
-                operator_id = self.current_user_id
-                data['operator_id'] = operator_id
+                data['操作时间'] = int(datetime.now().timestamp() * 1000)  # 毫秒级时间戳
+                data['操作者ID'] = [{"id": self.current_user_id}] if self.current_user_id else []
                 
                 logger.info(f"待验证的数据: {json.dumps(data, ensure_ascii=False, indent=2)}")
 
@@ -368,62 +366,43 @@ class DeepSeekChat:
                 if not self._validate_inventory_data(data):
                     raise ValueError("数据不完整或格式错误")
 
-                # 遍历所有商品，为每个商品创建一条记录
-                success = True
-                for product in data['products']:
-                    # 获取当前时间的 Unix timestamp（毫秒级）
-                    current_timestamp = int(datetime.now().timestamp() * 1000)
-                    
-                    # 将入库日期转换为 Unix timestamp（毫秒级）
-                    entry_date = int(datetime.strptime(data['entry_date'], '%Y-%m-%d').timestamp() * 1000)
-                    
-                    # 转换数据格式以匹配 inventory 表的结构
-                    inventory_data = {
-                        '入库日期': entry_date,  # 毫秒级时间戳
-                        '快递单号': data['tracking_number'],
-                        '快递手机号': data['phone'],
-                        '采购平台': data['platform'],
-                        '商品名称': product['name'],
-                        '入库数量': product['quantity'],
-                        '入库单价': product['price'],
-                        '仓库名': data['warehouse']['name'],
-                        '仓库分类': data['warehouse']['category'],
-                        '仓库地址': data['warehouse']['address'],
-                        '操作者ID': [{"id": operator_id}],
-                        '操作时间': current_timestamp,  # 毫秒级时间戳
-                    }
+                # 转换日期为时间戳
+                try:
+                    date_obj = datetime.strptime(data['出入库日期'], '%Y-%m-%d')
+                    data['出入库日期'] = int(date_obj.timestamp() * 1000)  # 转换为毫秒级时间戳
+                except ValueError as e:
+                    logger.error(f"日期格式转换错误: {str(e)}")
+                    raise ValueError("日期格式必须为 YYYY-MM-DD")
 
-                    # 写入数据库
-                    try:
-                        if not self.inventory_manager.add_inventory(inventory_data):
-                            success = False
-                            logger.error(f"写入商品 {product['name']} 的记录失败")
-                    except Exception as e:
-                        success = False
-                        logger.error(f"写入商品 {product['name']} 的记录时发生错误: {str(e)}")
-
-                if success:
-                    logger.info("所有入库记录已成功写入")
-                else:
-                    raise Exception("部分或全部记录写入失败")
+                # 写入数据库
+                try:
+                    if not self.inventory_manager.add_inventory(data):
+                        raise Exception("写入记录失败")
+                    logger.info("出入库记录已成功写入")
+                except Exception as e:
+                    logger.error(f"写入记录时发生错误: {str(e)}")
+                    raise
 
         except json.JSONDecodeError as e:
             logger.error(f"JSON 解析错误: {str(e)}")
             raise
         except Exception as e:
-            logger.error(f"处理入库记录时发生错误: {str(e)}")
+            logger.error(f"处理出入库记录时发生错误: {str(e)}")
             raise
 
     def _validate_inventory_data(self, data: dict) -> bool:
         """验证库存数据的完整性"""
         try:
+            # 必要字段列表
             required_fields = {
-                'entry_date': str,
-                'tracking_number': str,
-                'phone': str,
-                'platform': str,
-                'warehouse': dict,
-                'products': list
+                '出入库日期': str,
+                '商品名称': str,
+                '数量': (int, float),
+                '单价': (int, float),
+                '仓库名': str,
+                '仓库分类': str,
+                '仓库地址': str,
+                '操作类型': str
             }
             
             # 检查所有必需字段是否存在且不为空
@@ -431,32 +410,31 @@ class DeepSeekChat:
                 if field not in data:
                     logger.info(f"缺少必要字段: {field}")
                     return False
+                    
                 if not isinstance(data[field], field_type):
-                    logger.info(f"字段 {field} 类型错误")
-                    return False
-                # 检查字符串字段是否为空
-                if field_type == str and not data[field].strip():
-                    logger.info(f"字段 {field} 为空")
-                    return False
-                
-            # 验证 warehouse 字段
-            warehouse_fields = {'name', 'category', 'address'}
-            for field in warehouse_fields:
-                if field not in data['warehouse'] or not data['warehouse'][field].strip():
-                    logger.info(f"warehouse 字段 {field} 缺失或为空")
-                    return False
-            
-            # 验证 products 字段
-            if not data['products']:
-                logger.info("products 列表为空")
-                return False
-            
-            product_fields = {'name', 'quantity', 'price'}
-            for product in data['products']:
-                for field in product_fields:
-                    if field not in product or not str(product[field]).strip():
-                        logger.info(f"product 字段 {field} 缺失或为空")
+                    if isinstance(field_type, tuple):
+                        if not any(isinstance(data[field], t) for t in field_type):
+                            logger.info(f"字段 {field} 类型错误")
+                            return False
+                    else:
+                        logger.info(f"字段 {field} 类型错误")
                         return False
+                        
+                # 检查字符串字段是否为空
+                if isinstance(data[field], str) and not data[field].strip():
+                    logger.info(f"必要字段 {field} 为空")
+                    return False
+                    
+            # 验证操作类型是否合法
+            if data['操作类型'] not in ['入库', '出库']:
+                logger.info("操作类型必须是'入库'或'出库'")
+                return False
+                
+            # 验证数字字段是否为正数
+            for field in ['数量', '单价']:
+                if float(data[field]) <= 0:
+                    logger.info(f"{field}必须大于0")
+                    return False
             
             return True
             

@@ -2,20 +2,20 @@
 FEISHU_APP_ID=cli_***76100d
 FEISHU_APP_SECRET=BZY***pjGG
 
-# 飞书表格 token
-FEISHU_SHEET_TOKEN=GYw***n5e
+# # 飞书表格 token
+# FEISHU_SHEET_TOKEN=GYw***n5e
 
-# 仓库管理表
-WAREHOUSE_SHEET_ID=ad8***9f
+# # 仓库管理表
+# WAREHOUSE_SHEET_ID=ad8***9f
 
-# 商品管理表
-PRODUCT_SHEET_ID=8Fi***JL
+# # 商品管理表
+# PRODUCT_SHEET_ID=8Fi***JL
 
-# 商品分类管理表
-CATEGORY_SHEET_ID=tt7***6
+# # 商品分类管理表
+# CATEGORY_SHEET_ID=tt7***6
 
-# 库存明细表
-INVENTORY_SHEET_ID=aX0***mV
+# # 库存明细表
+# INVENTORY_SHEET_ID=aX0***mV
 
 # 飞书多维表格配置
 FEISHU_BITABLE_APP_TOKEN=KuQ***nId

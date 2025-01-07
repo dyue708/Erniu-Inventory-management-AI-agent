@@ -35,11 +35,13 @@ class BaseTableManager:
             # 定义字段类型映射
             field_types = {
                 # 库存表字段类型
-                "入库数量": 2,  # 数字类型
-                "入库单价": 2,  # 数字类型
-                "入库日期": 5,  # 日期时间类型
+                "数量": 2,  # 数字类型
+                "单价": 2,  # 数字类型
+                "总价": 20,  # 公式类型
+                "出入库日期": 5,  # 日期时间类型
                 "操作者ID": 11,  # 用户类型
                 "操作时间": 5,  # 日期时间类型
+                "操作类型": 3,  # 单选类型
             }
 
             # 更新现有列的类型
@@ -174,8 +176,8 @@ class WarehouseManager(BaseTableManager):
 class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
     COLUMNS = [
-        '入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '入库数量', '入库单价', 
-        '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间'
+        '出入库日期', '快递单号', '快递手机号', '采购平台', '商品名称', '数量', '单价', 
+        '仓库名', '仓库分类', '仓库地址', '操作者ID', '操作时间', '总价', '操作类型'
     ]
 
     def add_inventory(self, data: dict) -> bool:
@@ -183,27 +185,28 @@ class InventoryManager(BaseTableManager):
         try:
             # 确保数字类型字段为数字
             try:
-                entry_quantity = float(data.get('入库数量', 0))
-                entry_price = float(data.get('入库单价', 0))
+                quantity = float(data.get('数量', 0))
+                price = float(data.get('单价', 0))
             except (ValueError, TypeError):
-                print(f"数字转换失败: 入库数量={data.get('入库数量')}, 入库单价={data.get('入库单价')}")
+                print(f"数字转换失败: 数量={data.get('数量')}, 单价={data.get('单价')}")
                 return False
 
             # 构造新记录
             new_record = [{
                 "fields": {
-                    "入库日期": data.get('入库日期', ''),  # Unix timestamp
+                    "出入库日期": data.get('出入库日期', ''),
                     "快递单号": data.get('快递单号', ''),
                     "快递手机号": data.get('快递手机号', ''),
                     "采购平台": data.get('采购平台', ''),
                     "商品名称": data.get('商品名称', ''),
-                    "入库数量": entry_quantity,  # 使用转换后的数字
-                    "入库单价": entry_price,    # 使用转换后的数字
+                    "数量": quantity,
+                    "单价": price,
                     "仓库名": data.get('仓库名', ''),
                     "仓库分类": data.get('仓库分类', ''),
                     "仓库地址": data.get('仓库地址', ''),
                     "操作者ID": data.get('操作者ID', ''),
-                    "操作时间": data.get('操作时间', '')  # Unix timestamp
+                    "操作时间": data.get('操作时间', ''),
+                    "操作类型": data.get('操作类型', '入库')
                 }
             }]
             
