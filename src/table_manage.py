@@ -49,15 +49,8 @@ class BaseTableManager:
                     )
                     print(f"已添加新列: {column_name}")
 
-            # 重新获取更新后的字段配置
-            fields = self.sheet_client.get_bitable_fields(
-                app_token=config["app_token"],
-                table_id=config["table_id"]
-            )
-
-            # 定义字段类型映射
+            # 定义特殊字段类型映射
             field_types = {
-                # 库存表字段类型
                 "数量": 2,  # 数字类型
                 "单价": 2,  # 数字类型
                 "总价": 20,  # 公式类型
@@ -68,60 +61,27 @@ class BaseTableManager:
                 "操作类型": 3,  # 单选类型
             }
 
-            # 更新现有列的类型
+            # 只更新预设列中需要特殊类型的字段
             for field in fields:
-                field_id = field["field_id"]
                 field_name = field["field_name"]
-                desired_type = field_types.get(field_name, 1)  # 默认为文本类型
-                
-                if field["type"] != desired_type:
-                    field_config = {
-                        "field_name": field_name,
-                        "type": desired_type
-                    }
-                    self.sheet_client.update_bitable_fields(
-                        app_token=config["app_token"],
-                        table_id=config["table_id"],
-                        field_id=field_id,
-                        field_config=field_config
-                    )
-                    print(f"已将字段 '{field_name}' 更新为对应类型")
-
-            # 更新不匹配的列名
-            existing_columns = set(field["field_name"] for field in fields)
-            if existing_columns != desired_columns:
-                print(f"警告: {self.TABLE_NAME} 表格列名不匹配")
-                print(f"期望的列名: {self.COLUMNS}")
-                print(f"实际的列名: {list(existing_columns)}")
-                
-                # 更新不匹配的字段名
-                for field in fields:
-                    field_name = field["field_name"]
-                    field_id = field["field_id"]
+                # 只处理预设列中的字段
+                if field_name in desired_columns:
+                    desired_type = field_types.get(field_name, 1)  # 如果没有特殊设置，默认为文本类型
                     
-                    # 如果当前字段名不在期望的列名中，尝试更新为新的列名
-                    if field_name not in desired_columns:
-                        # 找到一个未使用的期望列名
-                        new_name = next((col for col in desired_columns if col not in existing_columns), None)
-                        if new_name:
-                            # 更新字段配置
-                            field_config = {
-                                "field_name": new_name,
-                                "type": 1  # 确保更新名称时也设置为文本类型
-                            }
-                            
-                            self.sheet_client.update_bitable_fields(
-                                app_token=config["app_token"],
-                                table_id=config["table_id"],
-                                field_id=field_id,
-                                field_config=field_config
-                            )
-                            print(f"已将字段 '{field_name}' 更新为 '{new_name}' (文本类型)")
-                            
-                            # 更新已存在的列名集合
-                            existing_columns.remove(field_name)
-                            existing_columns.add(new_name)
-                            
+                    # 如果字段需要特殊类型且当前类型不匹配，则更新
+                    if field_name in field_types and field["type"] != desired_type:
+                        field_config = {
+                            "field_name": field_name,
+                            "type": desired_type
+                        }
+                        self.sheet_client.update_bitable_fields(
+                            app_token=config["app_token"],
+                            table_id=config["table_id"],
+                            field_id=field["field_id"],
+                            field_config=field_config
+                        )
+                        print(f"已将字段 '{field_name}' 更新为对应类型")
+
         except Exception as e:
             print(f"验证和更新列名时发生错误: {e}")
 
@@ -184,7 +144,7 @@ class WarehouseManager(BaseTableManager):
 class InventoryManager(BaseTableManager):
     TABLE_NAME = "inventory"
     COLUMNS = [
-        '出入库日期', '快递单号', '快递手机号', '采购平台', '商品ID', '商品名称', '数量', '单价', 
+        '出入库日期', '快递单号', '快递手机号', '往来单位', '商品ID', '商品名称', '数量', '单价', 
         '仓库名', '仓库备注', '仓库地址', '操作者ID', '操作时间', '总价', '变动数量', '操作类型'
     ]
 
@@ -205,7 +165,7 @@ class InventoryManager(BaseTableManager):
                     "出入库日期": data.get('出入库日期', ''),
                     "快递单号": data.get('快递单号', ''),
                     "快递手机号": data.get('快递手机号', ''),
-                    "采购平台": data.get('采购平台', ''),
+                    "往来单位": data.get('往来单位', ''),
                     "商品ID": data.get('商品ID', ''),
                     "商品名称": data.get('商品名称', ''),
                     "数量": quantity,
