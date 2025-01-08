@@ -8,3 +8,7 @@ myenv/
 myenv
 # 忽略所有 Python 字节码缓存
 **/__pycache__/
+build/
+build/*
+dist/*
+dist
