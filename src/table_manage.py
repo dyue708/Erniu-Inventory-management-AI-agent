@@ -337,13 +337,16 @@ class OutboundManager(BaseTableManager):
                             break
 
                         current_stock = float(stock['当前库存'])
+                        if current_stock <= 0:
+                            continue
+
                         outbound_qty = min(remaining_qty, current_stock)
                         
                         # 为每个不同入库单价创建一条出库记录
                         new_record = [{
                             "fields": {
                                 "出库单号": outbound_no,
-                                "出库日期": fields.get('出库日期', fields.get('出入库日期')),
+                                "出库日期": fields.get('出入库日期', ''),
                                 "快递单号": fields.get('快递单号', ''),
                                 "快递手机号": fields.get('快递手机号', ''),
                                 "客户": fields.get('客户', ''),
@@ -351,7 +354,7 @@ class OutboundManager(BaseTableManager):
                                 "商品名称": fields.get('商品名称', ''),
                                 "出库数量": outbound_qty,
                                 "出库单价": float(fields.get('出库单价', 0)),
-                                "入库单价": float(stock['入库单价']),  # 添加入库单价
+                                "入库单价": float(stock['入库单价']),
                                 "仓库名": warehouse,
                                 "仓库备注": fields.get('仓库备注', ''),
                                 "仓库地址": fields.get('仓库地址', ''),
@@ -370,40 +373,47 @@ class OutboundManager(BaseTableManager):
                         )
 
                         if response:
-                            successful_records.append({
-                                'record': new_record[0],
-                                'response': response
-                            })
-                            remaining_qty -= outbound_qty
+                            # 更新库存汇总
+                            outbound_data = {
+                                "商品ID": product_id,
+                                "商品名称": fields.get('商品名称', ''),
+                                "仓库名": warehouse,
+                                "出库数量": outbound_qty,
+                                "出库单价": float(fields.get('出库单价', 0)),
+                                "入库单价": float(stock['入库单价'])  # 添加入库单价
+                            }
+                            
+                            if inventory_mgr.update_outbound(outbound_data):
+                                successful_records.append({
+                                    'record': new_record[0],
+                                    'response': response
+                                })
+                                remaining_qty -= outbound_qty
+                            else:
+                                self._rollback_records(successful_records)
+                                print("更新库存汇总失败")
+                                return False
                         else:
                             self._rollback_records(successful_records)
                             print("写入出库记录失败")
                             return False
 
-                # 所有记录写入成功后，更新库存
-                for data in data_list:
-                    fields = data.get('fields', data)
-                    outbound_data = fields.copy()
-                    outbound_data['出库数量'] = float(fields.get('出库数量', 0))
-                    
-                    if not inventory_mgr.update_outbound(outbound_data):
-                        # 如果更新库存失败，回滚所有记录
+                    if remaining_qty > 0:
                         self._rollback_records(successful_records)
-                        print("更新库存汇总失败")
+                        print(f"商品 {fields.get('商品名称')} 库存不足")
                         return False
-                    
+
                     print(f"成功处理商品 {fields.get('商品名称')} 的出库")
 
                 return True
 
             except Exception as e:
-                # 发生异常时回滚所有记录
                 self._rollback_records(successful_records)
                 print(f"处理出库记录时发生错误: {str(e)}")
                 return False
 
         except Exception as e:
-            print(f"添加出库记录失败: {e}")
+            print(f"添加出库记录时发生错误: {str(e)}")
             return False
 
     def _rollback_records(self, successful_records: list) -> None:
