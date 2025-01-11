@@ -58,12 +58,12 @@ class DeepSeekChat:
         "入库单价": 数字类型的单价（入库时使用）,
         "出库单价": 数字类型的单价（出库时使用）,
         "仓库名": "仓库名称",
-        "仓库备注": "仓库备注",
-        "仓库地址": "仓库地址",
+        "仓库备注": "根据仓库名自动匹配",
+        "仓库地址": "根据仓库名自动匹配",
         "供应商": "入库时的供应商名称（仅入库时需要）",
         "客户": "出库时的客户名称（仅出库时需要）",
-        "快递单号": "快递单号",
-        "快递手机号": "手机号"
+        "快递单号": "快递单号（可选）",
+        "快递手机号": "手机号（可选）"
     }
 ]
 
@@ -97,6 +97,7 @@ class DeepSeekChat:
    - 使用 inventory_summary 表检查每个商品的库存
    - 如果任何商品库存不足，立即告知用户具体哪些商品库存不足
    - 只有当所有商品库存充足时才继续处理出库请求
+12. 如果用户提供了快递单号和手机号，请将这些信息添加到入库出库记录中
 
 请按以下格式返回数据：
 1. 如果信息完整且商品名称匹配（对于出库还需要库存充足）：
@@ -380,7 +381,7 @@ class DeepSeekChat:
                                                 })
                                         except Exception as e:
                                             # 写入失败时，修改 AI 的回复
-                                            error_msg = f"\n\n写入失败: {str(e)}\n请重试或联系管理员。"
+                                            error_msg = f"\n\n写入失败: {str(e)}\n请重新提交。"
                                             assistant_message += error_msg
                                 except Exception as e:
                                     logger.error(f"处理 JSON 数据时出错: {str(e)}")
@@ -564,12 +565,28 @@ class DeepSeekChat:
                 '商品ID': str,
                 '商品名称': str,
                 '仓库名': str,
-                '仓库备注': str,
-                '仓库地址': str,
                 '操作类型': str,
+            }
+            
+            # 可选字段列表
+            optional_fields = {
                 '快递单号': str,
                 '快递手机号': str
             }
+            
+            # 验证并自动填充仓库信息
+            if '仓库名' in data and data['仓库名']:
+                warehouse_info = self.warehouses[
+                    self.warehouses['仓库名'] == data['仓库名']
+                ].iloc[0] if not self.warehouses.empty else None
+                
+                if warehouse_info is not None:
+                    # 自动填充仓库地址和备注
+                    data['仓库地址'] = warehouse_info['仓库地址']
+                    data['仓库备注'] = warehouse_info.get('仓库备注', '')
+                else:
+                    logger.info(f"找不到仓库信息: {data['仓库名']}")
+                    return False
             
             # 根据操作类型添加相应的必要字段
             if data.get('操作类型') == '入库':
@@ -593,7 +610,7 @@ class DeepSeekChat:
                 if field not in data:
                     logger.info(f"缺少必要字段: {field}")
                     return False
-                    
+                
                 # 对于商品ID，确保它是字符串类型
                 if field == '商品ID':
                     data[field] = str(data[field])
@@ -606,12 +623,22 @@ class DeepSeekChat:
                     else:
                         logger.info(f"字段 {field} 类型错误")
                         return False
-                        
+                
                 # 检查字符串字段是否为空
                 if isinstance(data[field], str) and not data[field].strip():
                     logger.info(f"必要字段 {field} 为空")
                     return False
-                    
+            
+            # 检查可选字段的类型（如果存在的话）
+            for field, field_type in optional_fields.items():
+                if field in data and data[field]:  # 只在字段存在且不为空时验证类型
+                    if not isinstance(data[field], field_type):
+                        logger.info(f"可选字段 {field} 类型错误")
+                        return False
+                else:
+                    # 如果可选字段不存在或为空，设置为空字符串
+                    data[field] = ""
+            
             # 验证数字字段是否为正数
             if data['操作类型'] == '入库':
                 if float(data['入库数量']) <= 0:
