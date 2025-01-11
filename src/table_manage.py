@@ -55,20 +55,33 @@ class BaseTableManager:
                 # 只处理预设列中的字段
                 if field_name in desired_columns:
                     desired_type = self.FIELD_TYPES.get(field_name, 1)  # 如果没有特殊设置，默认为文本类型
+                    field_config = {
+                        "field_name": field_name,
+                        "type": desired_type
+                    }
+                    
+                    # 为日期时间类型添加格式化配置
+                    if desired_type == 5:  # 日期时间类型
+                        field_config["property"] = {
+                            "auto_fill": False,
+                            "date_formatter": "yyyy/MM/dd HH:mm"
+                        }
+                        # 出入库日期使用不同的格式
+                        if field_name in ['出库日期', '入库日期']:
+                            field_config["property"]["date_formatter"] = "yyyy-MM-dd"
                     
                     # 如果字段需要特殊类型且当前类型不匹配，则更新
-                    if field_name in self.FIELD_TYPES and field["type"] != desired_type:
-                        field_config = {
-                            "field_name": field_name,
-                            "type": desired_type
-                        }
+                    if (field_name in self.FIELD_TYPES and 
+                        (field["type"] != desired_type or 
+                         (desired_type == 5 and field.get("property", {}).get("date_formatter") != field_config.get("property", {}).get("date_formatter")))):
+                        
                         self.sheet_client.update_bitable_fields(
                             app_token=config["app_token"],
                             table_id=config["table_id"],
                             field_id=field["field_id"],
                             field_config=field_config
                         )
-                        print(f"已将字段 '{field_name}' 更新为对应类型")
+                        print(f"已将字段 '{field_name}' 更新为对应类型和格式")
 
         except Exception as e:
             print(f"验证和更新列名时发生错误: {e}")
