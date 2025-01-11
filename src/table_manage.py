@@ -16,7 +16,7 @@ class BaseTableManager:
 
     def _validate_and_update_columns(self):
         """验证并更新表格列名和字段类型"""
-        if not hasattr(self, 'TABLE_NAME') or not hasattr(self, 'COLUMNS'):
+        if not hasattr(self, 'TABLE_NAME') or not hasattr(self, 'COLUMNS') or not hasattr(self, 'FIELD_TYPES'):
             return
 
         try:
@@ -39,7 +39,7 @@ class BaseTableManager:
                 for column_name in missing_columns:
                     field_config = {
                         "field_name": column_name,
-                        "type": 1,  # 默认使用文本类型
+                        "type": self.FIELD_TYPES.get(column_name, 1),  # 使用预设的类型
                     }
                     
                     self.sheet_client.create_bitable_field(
@@ -49,27 +49,15 @@ class BaseTableManager:
                     )
                     print(f"已添加新列: {column_name}")
 
-            # 定义特殊字段类型映射
-            field_types = {
-                "数量": 2,  # 数字类型
-                "单价": 2,  # 数字类型
-                "总价": 20,  # 公式类型
-                "变动数量": 20,  # 公式类型
-                "出入库日期": 5,  # 日期时间类型
-                "操作者ID": 11,  # 用户类型
-                "操作时间": 5,  # 日期时间类型
-                "操作类型": 3,  # 单选类型
-            }
-
             # 只更新预设列中需要特殊类型的字段
             for field in fields:
                 field_name = field["field_name"]
                 # 只处理预设列中的字段
                 if field_name in desired_columns:
-                    desired_type = field_types.get(field_name, 1)  # 如果没有特殊设置，默认为文本类型
+                    desired_type = self.FIELD_TYPES.get(field_name, 1)  # 如果没有特殊设置，默认为文本类型
                     
                     # 如果字段需要特殊类型且当前类型不匹配，则更新
-                    if field_name in field_types and field["type"] != desired_type:
+                    if field_name in self.FIELD_TYPES and field["type"] != desired_type:
                         field_config = {
                             "field_name": field_name,
                             "type": desired_type
@@ -88,6 +76,11 @@ class BaseTableManager:
 class WarehouseManager(BaseTableManager):
     TABLE_NAME = "warehouse"
     COLUMNS = ['仓库名', '仓库备注', '仓库地址']
+    FIELD_TYPES = {
+        "仓库名": 1,  # 文本类型
+        "仓库备注": 1,  # 文本类型
+        "仓库地址": 1,  # 文本类型
+    }
 
     def get_data(self) -> pd.DataFrame:
         """查看仓库数据"""
@@ -141,54 +134,200 @@ class WarehouseManager(BaseTableManager):
         except Exception as e:
             raise Exception(f"更新仓库数据失败: {e}")
 
-class InventoryManager(BaseTableManager):
-    TABLE_NAME = "inventory"
+class InboundManager(BaseTableManager):
+    TABLE_NAME = "inbound"
     COLUMNS = [
-        '出入库日期', '快递单号', '快递手机号', '往来单位', '商品ID', '商品名称', '数量', '单价', 
-        '仓库名', '仓库备注', '仓库地址', '操作者ID', '操作时间', '总价', '变动数量', '操作类型'
+        '入库单号', '入库日期', '快递单号', '快递手机号', '供应商', '商品ID', '商品名称', '入库数量', '入库单价', 
+        '仓库名', '仓库备注', '仓库地址', '操作者ID', '操作时间', '入库总价'
     ]
+    FIELD_TYPES = {
+        "入库单号": 1,  # 文本类型
+        "入库日期": 5,  # 日期时间类型
+        "快递单号": 1,  # 文本类型
+        "快递手机号": 1,  # 文本类型
+        "供应商": 1,  # 文本类型
+        "商品ID": 1,  # 文本类型
+        "商品名称": 1,  # 文本类型
+        "入库数量": 2,  # 数字类型
+        "入库单价": 2,  # 数字类型
+        "仓库名": 1,  # 文本类型
+        "仓库备注": 1,  # 文本类型
+        "仓库地址": 1,  # 文本类型
+        "操作者ID": 11,  # 用户类型
+        "操作时间": 5,  # 日期时间类型
+        "入库总价": 2,  # 数字类型
+    }
 
-    def add_inventory(self, data: dict) -> bool:
-        """添加库存记录"""
+    def add_inbound(self, data_list: list[dict]) -> bool:
+        """添加多条入库记录
+        Args:
+            data_list: 包含多个商品入库信息的列表
+        """
         try:
-            # 确保数字类型字段为数字
-            try:
-                quantity = float(data.get('数量', 0))
-                price = float(data.get('单价', 0))
-            except (ValueError, TypeError):
-                print(f"数字转换失败: 数量={data.get('数量')}, 单价={data.get('单价')}")
-                return False
-
-            # 构造新记录
-            new_record = [{
-                "fields": {
-                    "出入库日期": data.get('出入库日期', ''),
-                    "快递单号": data.get('快递单号', ''),
-                    "快递手机号": data.get('快递手机号', ''),
-                    "往来单位": data.get('往来单位', ''),
-                    "商品ID": data.get('商品ID', ''),
-                    "商品名称": data.get('商品名称', ''),
-                    "数量": quantity,
-                    "单价": price,
-                    "仓库名": data.get('仓库名', ''),
-                    "仓库备注": data.get('仓库备注', ''),
-                    "仓库地址": data.get('仓库地址', ''),
-                    "操作者ID": data.get('操作者ID', ''),
-                    "操作时间": data.get('操作时间', ''),
-                    "操作类型": data.get('操作类型', '入库')
-                }
-            }]
-            
+            success_count = 0
+            inventory_mgr = InventorySummaryManager()
             config = self.bitable_config[self.TABLE_NAME]
-            response = self.sheet_client.write_bitable(
-                app_token=config["app_token"],
-                table_id=config["table_id"],
-                records=new_record
-            )
-            return True if response else False
+
+            for data in data_list:
+                try:
+                    quantity = float(data.get('数量', 0))
+                    price = float(data.get('单价', 0))
+                except (ValueError, TypeError):
+                    print(f"数字转换失败: 数量={data.get('数量')}, 单价={data.get('单价')}")
+                    continue
+
+                # 构造单条入库记录
+                new_record = [{
+                    "fields": {
+                        "入库单号": data.get('入库单号', ''),
+                        "入库日期": data.get('入库日期', ''),
+                        "快递单号": data.get('快递单号', ''),
+                        "快递手机号": data.get('快递手机号', ''),
+                        "供应商": data.get('供应商', ''),
+                        "商品ID": data.get('商品ID', ''),
+                        "商品名称": data.get('商品名称', ''),
+                        "入库数量": quantity,
+                        "入库单价": price,
+                        "仓库名": data.get('仓库名', ''),
+                        "仓库备注": data.get('仓库备注', ''),
+                        "仓库地址": data.get('仓库地址', ''),
+                        "操作者ID": data.get('操作者ID', ''),
+                        "操作时间": data.get('操作时间', ''),
+                        "入库总价": quantity * price
+                    }
+                }]
+                
+                response = self.sheet_client.write_bitable(
+                    app_token=config["app_token"],
+                    table_id=config["table_id"],
+                    records=new_record
+                )
+                
+                if response:
+                    # 更新库存汇总
+                    if inventory_mgr.update_inbound(data):
+                        success_count += 1
+            
+            return success_count == len(data_list)
             
         except Exception as e:
-            print(f"添加库存记录失败: {e}")
+            print(f"添加入库记录失败: {e}")
+            return False
+
+class OutboundManager(BaseTableManager):
+    TABLE_NAME = "outbound"
+    COLUMNS = [
+        '出库单号', '出库日期', '快递单号', '快递手机号', '客户', '商品ID', '商品名称', 
+        '出库数量', '出库单价', '入库单价', # 添加入库单价列
+        '仓库名', '仓库备注', '仓库地址', '操作者ID', '操作时间', '出库总价'
+    ]
+    FIELD_TYPES = {
+        "出库单号": 1,  # 文本类型
+        "出库日期": 5,  # 日期时间类型
+        "快递单号": 1,  # 文本类型
+        "快递手机号": 1,  # 文本类型
+        "客户": 1,  # 文本类型
+        "商品ID": 1,  # 文本类型
+        "商品名称": 1,  # 文本类型
+        "出库数量": 2,  # 数字类型
+        "出库单价": 2,  # 数字类型
+        "入库单价": 2,  # 数字类型
+        "仓库名": 1,  # 文本类型
+        "仓库备注": 1,  # 文本类型
+        "仓库地址": 1,  # 文本类型
+        "操作者ID": 11,  # 用户类型
+        "操作时间": 5,  # 日期时间类型
+        "出库总价": 2,  # 数字类型
+    }
+
+    def add_outbound(self, data_list: list[dict]) -> bool:
+        """添加多条出库记录，优先出库入库单价高的商品
+        Args:
+            data_list: 包含多个商品出库信息的列表
+        """
+        try:
+            success_count = 0
+            inventory_mgr = InventorySummaryManager()
+            config = self.bitable_config[self.TABLE_NAME]
+
+            for data in data_list:
+                try:
+                    required_qty = float(data.get('数量', 0))
+                except (ValueError, TypeError):
+                    print(f"数量转换失败: {data.get('数量')}")
+                    continue
+
+                # 获取当前库存信息，按入库单价降序排序
+                stock_df = inventory_mgr.get_stock_summary(
+                    product_id=data.get('商品ID'),
+                    warehouse=data.get('仓库名')
+                )
+                
+                if not stock_df.empty:
+                    stock_df['当前库存'] = stock_df['当前库存'].astype(float)
+                    stock_df['入库单价'] = stock_df['入库单价'].astype(float)
+                    stock_df = stock_df.sort_values('入库单价', ascending=False)
+                    total_stock = stock_df['当前库存'].sum()
+                else:
+                    total_stock = 0
+
+                if total_stock < required_qty:
+                    print(f"商品 {data.get('商品ID')} 库存不足: 需要 {required_qty}, 实际 {total_stock}")
+                    continue
+
+                remaining_qty = required_qty
+                for _, stock_row in stock_df.iterrows():
+                    if remaining_qty <= 0:
+                        break
+
+                    current_stock = float(stock_row['当前库存'])
+                    if current_stock <= 0:
+                        continue
+
+                    outbound_qty = min(remaining_qty, current_stock)
+                    
+                    # 创建出库记录，包含对应的入库单价
+                    new_record = [{
+                        "fields": {
+                            "出库单号": data.get('出库单号', ''),
+                            "出库日期": data.get('出库日期', ''),
+                            "快递单号": data.get('快递单号', ''),
+                            "快递手机号": data.get('快递手机号', ''),
+                            "客户": data.get('客户', ''),
+                            "商品ID": data.get('商品ID', ''),
+                            "商品名称": data.get('商品名称', ''),
+                            "出库数量": outbound_qty,
+                            "出库单价": float(data.get('单价', 0)),
+                            "入库单价": float(stock_row['入库单价']),  # 记录对应的入库单价
+                            "仓库名": data.get('仓库名', ''),
+                            "仓库备注": data.get('仓库备注', ''),
+                            "仓库地址": data.get('仓库地址', ''),
+                            "操作者ID": data.get('操作者ID', ''),
+                            "操作时间": data.get('操作时间', ''),
+                            "出库总价": outbound_qty * float(data.get('单价', 0))
+                        }
+                    }]
+
+                    response = self.sheet_client.write_bitable(
+                        app_token=config["app_token"],
+                        table_id=config["table_id"],
+                        records=new_record
+                    )
+
+                    if response:
+                        # 更新库存汇总
+                        outbound_data = data.copy()
+                        outbound_data['数量'] = outbound_qty
+                        outbound_data['入库单价'] = float(stock_row['入库单价'])
+                        if inventory_mgr.update_outbound(outbound_data):
+                            remaining_qty -= outbound_qty
+                            if remaining_qty <= 0:
+                                success_count += 1
+
+            return success_count == len(data_list)
+
+        except Exception as e:
+            print(f"添加出库记录失败: {e}")
             return False
 
 class ProductManager(BaseTableManager):
@@ -225,47 +364,335 @@ class ProductManager(BaseTableManager):
             print(f"读取商品数据失败: {e}")
             return pd.DataFrame()
 
-def main():
-    """测试函数：读取并显示库存表和仓库表数据"""
+class InventorySummaryManager(BaseTableManager):
+    TABLE_NAME = "inventory_summary"
+    COLUMNS = [
+        '商品ID', '商品名称', '仓库名', '入库单价', 
+        '累计入库数量', '累计出库数量', '当前库存', 
+        '入库总价', '出库总价', '最后更新时间',
+        '最后入库时间', '最后出库时间'
+    ]
+    FIELD_TYPES = {
+        "入库单价": 2,  # 数字类型
+        "累计入库数量": 2,  # 数字类型
+        "累计出库数量": 2,  # 数字类型
+        "当前库存": 2,  # 数字类型
+        "入库总价": 2,  # 数字类型
+        "出库总价": 2,  # 数字类型
+        "最后更新时间": 5,  # 日期时间类型
+        "最后入库时间": 5,  # 日期时间类型
+        "最后出库时间": 5,  # 日期时间类型
+    }
+
+    def update_inbound(self, inbound_data: dict) -> bool:
+        """处理入库记录，更新库存汇总"""
+        try:
+            config = self.bitable_config[self.TABLE_NAME]
+            
+            # 查找现有记录
+            existing_data = self.sheet_client.read_bitable(
+                app_token=config["app_token"],
+                table_id=config["table_id"]
+            )
+
+            # 构建查询键：商品ID + 仓库名 + 入库单价
+            query_key = (
+                inbound_data['商品ID'],
+                inbound_data['仓库名'],
+                float(inbound_data['单价'])
+            )
+
+            # 查找匹配记录
+            matching_record = None
+            record_id = None
+            
+            if existing_data and existing_data.get("items"):
+                for item in existing_data["items"]:
+                    fields = item["fields"]
+                    if (fields.get("商品ID") == query_key[0] and
+                        fields.get("仓库名") == query_key[1] and
+                        float(fields.get("入库单价", 0)) == query_key[2]):
+                        matching_record = fields
+                        record_id = item["record_id"]
+                        break
+
+            current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
+            quantity = float(inbound_data['数量'])
+            price = float(inbound_data['单价'])
+            total_price = quantity * price
+
+            if matching_record:
+                # 更新现有记录
+                new_inbound_qty = float(matching_record.get('累计入库数量', 0)) + quantity
+                new_current_qty = float(matching_record.get('当前库存', 0)) + quantity
+                new_inbound_total = float(matching_record.get('入库总价', 0)) + total_price
+
+                update_fields = {
+                    "累计入库数量": new_inbound_qty,
+                    "当前库存": new_current_qty,
+                    "入库总价": new_inbound_total,
+                    "最后更新时间": current_time,
+                    "最后入库时间": current_time
+                }
+
+                self.sheet_client.update_bitable(
+                    app_token=config["app_token"],
+                    table_id=config["table_id"],
+                    record_id=record_id,
+                    fields=update_fields
+                )
+            else:
+                # 创建新记录
+                new_record = [{
+                    "fields": {
+                        "商品ID": inbound_data['商品ID'],
+                        "商品名称": inbound_data['商品名称'],
+                        "仓库名": inbound_data['仓库名'],
+                        "入库单价": price,
+                        "累计入库数量": quantity,
+                        "累计出库数量": 0,
+                        "当前库存": quantity,
+                        "入库总价": total_price,
+                        "出库总价": 0,
+                        "最后更新时间": current_time,
+                        "最后入库时间": current_time,
+                        "最后出库时间": None  # 对于新记录，最后出库时间设为空
+                    }
+                }]
+
+                self.sheet_client.write_bitable(
+                    app_token=config["app_token"],
+                    table_id=config["table_id"],
+                    records=new_record
+                )
+
+            return True
+
+        except Exception as e:
+            print(f"更新入库库存汇总失败: {e}")
+            return False
+
+    def update_outbound(self, outbound_data: dict) -> bool:
+        """处理出库记录，更新库存汇总（优先出库价格高的商品）"""
+        try:
+            config = self.bitable_config[self.TABLE_NAME]
+            
+            # 查找该商品在指定仓库的所有库存记录
+            existing_data = self.sheet_client.read_bitable(
+                app_token=config["app_token"],
+                table_id=config["table_id"]
+            )
+
+            if not existing_data or not existing_data.get("items"):
+                raise Exception("未找到库存记录")
+
+            # 筛选符合条件的记录并按入库单价降序排序
+            matching_records = []
+            for item in existing_data["items"]:
+                fields = item["fields"]
+                if (fields.get("商品ID") == outbound_data['商品ID'] and
+                    fields.get("仓库名") == outbound_data['仓库名'] and
+                    float(fields.get("当前库存", 0)) > 0):
+                    matching_records.append({
+                        "record_id": item["record_id"],
+                        "fields": fields
+                    })
+
+            if not matching_records:
+                raise Exception("没有足够的库存")
+
+            # 按入库单价降序排序
+            matching_records.sort(
+                key=lambda x: float(x["fields"].get("入库单价", 0)), 
+                reverse=True
+            )
+
+            # 计算需要出库的数量
+            remaining_qty = float(outbound_data['数量'])
+            current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
+
+            # 从高价库存开始出库
+            for record in matching_records:
+                if remaining_qty <= 0:
+                    break
+
+                current_stock = float(record["fields"].get("当前库存", 0))
+                outbound_qty = min(remaining_qty, current_stock)
+                # 使用出库单价计算总价，而不是入库单价
+                outbound_price = float(outbound_data.get('单价', 0))
+                total_price = outbound_qty * outbound_price
+
+                # 更新记录
+                new_outbound_qty = float(record["fields"].get("累计出库数量", 0)) + outbound_qty
+                new_current_qty = current_stock - outbound_qty
+                new_outbound_total = float(record["fields"].get("出库总价", 0)) + total_price
+
+                update_fields = {
+                    "累计出库数量": new_outbound_qty,
+                    "当前库存": new_current_qty,
+                    "出库总价": new_outbound_total,
+                    "最后更新时间": current_time,
+                    "最后出库时间": current_time
+                }
+
+                self.sheet_client.update_bitable(
+                    app_token=config["app_token"],
+                    table_id=config["table_id"],
+                    record_id=record["record_id"],
+                    fields=update_fields
+                )
+
+                remaining_qty -= outbound_qty
+
+            if remaining_qty > 0:
+                raise Exception("库存不足")
+
+            return True
+
+        except Exception as e:
+            print(f"更新出库库存汇总失败: {e}")
+            return False
+
+    def get_stock_summary(self, product_id: str = None, warehouse: str = None) -> pd.DataFrame:
+        """获取库存汇总信息"""
+        try:
+            config = self.bitable_config[self.TABLE_NAME]
+            data = self.sheet_client.read_bitable(
+                app_token=config["app_token"],
+                table_id=config["table_id"]
+            )
+            
+            if not data or not data.get("items"):
+                return pd.DataFrame(columns=self.COLUMNS)
+            
+            records = []
+            for item in data["items"]:
+                fields = item["fields"]
+                if (product_id and fields.get("商品ID") != product_id or
+                    warehouse and fields.get("仓库名") != warehouse):
+                    continue
+                    
+                records.append([
+                    fields.get(col, "") for col in self.COLUMNS
+                ])
+            
+            return pd.DataFrame(records, columns=self.COLUMNS)
+            
+        except Exception as e:
+            print(f"获取库存汇总失败: {e}")
+            return pd.DataFrame()
+
+def test_inventory_operations():
+    """测试入库和出库操作"""
     try:
         # 初始化管理器
-        warehouse_mgr = WarehouseManager()
-        inventory_mgr = InventoryManager()
-        product_mgr = ProductManager()  # 添加商品管理器实例
+        inbound_mgr = InboundManager()
+        outbound_mgr = OutboundManager()
+        inventory_mgr = InventorySummaryManager()
 
-        # 读取商品数据
-        print("\n=== 商品表数据 ===")
-        product_df = product_mgr.get_data()
-        print("列名:", product_df.columns.tolist())
-        print(product_df)
+        # 测试数据 - 入库
+        current_timestamp = int(datetime.now().timestamp() * 1000)  # 转换为毫秒级时间戳
+        test_user_id = "ou_8234c13164697b3c129c84a14f36386f"  # 使用实际的用户ID
+        inbound_data = [
+            {
+                "入库单号": "TEST-IN-002",
+                "入库日期": current_timestamp,  # 使用时间戳
+                "快递单号": "SF001",
+                "快递手机号": "13800138000",
+                "供应商": "测试供应商A",
+                "商品ID": "TEST-P001",
+                "商品名称": "测试商品1",
+                "数量": 100,
+                "单价": 10.5,
+                "仓库名": "测试仓库",
+                "仓库备注": "测试用",
+                "仓库地址": "测试地址",
+                "操作者ID": [{"id": test_user_id}],
+                "操作时间": current_timestamp  # 使用时间戳
+            },
+            {
+                "入库单号": "TEST-IN-002",
+                "入库日期": current_timestamp,  # 使用时间戳
+                "快递单号": "SF001",
+                "快递手机号": "13800138000",
+                "供应商": "测试供应商A",
+                "商品ID": "TEST-P001",  # 同一商品，不同价格
+                "商品名称": "测试商品1",
+                "数量": 50,
+                "单价": 12.0,
+                "仓库名": "测试仓库",
+                "仓库备注": "测试用",
+                "仓库地址": "测试地址",
+                "操作者ID": [{"id": test_user_id}],
+                "操作时间": current_timestamp  # 使用时间戳
+            }
+        ]
 
-        # 读取仓库数据
-        print("\n=== 仓库表数据 ===")
-        warehouse_df = warehouse_mgr.get_data()
-        print("列名:", warehouse_df.columns.tolist())
-        print(warehouse_df)
+        print("\n=== 测试入库操作 ===")
+        inbound_result = inbound_mgr.add_inbound(inbound_data)
+        print(f"入库结果: {'成功' if inbound_result else '失败'}")
 
-        # 读取库存数据
-        print("\n=== 库存表数据 ===")
-        inventory_data = inventory_mgr.sheet_client.read_bitable(
-            app_token=inventory_mgr.bitable_config[inventory_mgr.TABLE_NAME]["app_token"],
-            table_id=inventory_mgr.bitable_config[inventory_mgr.TABLE_NAME]["table_id"]
-        )
-        
-        if inventory_data and inventory_data.get("items"):
-            records = []
-            for item in inventory_data["items"]:
-                records.append([item["fields"].get(col, "") for col in inventory_mgr.COLUMNS])
-            inventory_df = pd.DataFrame(records, columns=inventory_mgr.COLUMNS)
-            print("列名:", inventory_df.columns.tolist())
-            print(inventory_df)
-        else:
-            print("库存表为空")
+        # 查看入库后的库存状态
+        print("\n=== 入库后库存状态 ===")
+        stock_after_inbound = inventory_mgr.get_stock_summary(product_id="TEST-P001")
+        print(stock_after_inbound)
+
+        # 测试数据 - 出库
+        outbound_data = [
+            {
+                "出库单号": "TEST-OUT-002",
+                "出库日期": current_timestamp,  # 使用时间戳
+                "快递单号": "SF002",
+                "快递手机号": "13900139000",
+                "客户": "测试客户A",
+                "商品ID": "TEST-P001",
+                "商品名称": "测试商品1",
+                "数量": 80,  # 部分出库
+                "单价": 15.0,
+                "仓库名": "测试仓库",
+                "仓库备注": "测试用",
+                "仓库地址": "测试地址",
+                "操作者ID": [{"id": test_user_id}],
+                "操作时间": current_timestamp  # 使用时间戳
+            }
+        ]
+
+        print("\n=== 测试出库操作 ===")
+        outbound_result = outbound_mgr.add_outbound(outbound_data)
+        print(f"出库结果: {'成功' if outbound_result else '失败'}")
+
+        # 查看出库后的库存状态
+        print("\n=== 出库后库存状态 ===")
+        stock_after_outbound = inventory_mgr.get_stock_summary(product_id="TEST-P001")
+        print(stock_after_outbound)
+
+        # 测试库存不足的情况
+        print("\n=== 测试库存不足情况 ===")
+        outbound_data_insufficient = [
+            {
+                "出库单号": "TEST-OUT-003",
+                "出库日期": current_timestamp,  # 使用时间戳
+                "快递单号": "SF003",
+                "快递手机号": "13900139000",
+                "客户": "测试客户B",
+                "商品ID": "TEST-P001",
+                "商品名称": "测试商品1",
+                "数量": 20,  # 超出库存数量
+                "单价": 15.0,
+                "仓库名": "测试仓库",
+                "仓库备注": "测试用",
+                "仓库地址": "测试地址",
+                "操作者ID": [{"id": test_user_id}],
+                "操作时间": current_timestamp  # 使用时间戳
+            }
+        ]
+        outbound_result = outbound_mgr.add_outbound(outbound_data_insufficient)
+        print(f"库存不足出库结果: {'成功' if outbound_result else '失败'}")
 
     except Exception as e:
         print(f"测试过程中发生错误: {e}")
 
 if __name__ == "__main__":
-    main()
+    test_inventory_operations()
 
 

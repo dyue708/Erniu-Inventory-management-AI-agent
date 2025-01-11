@@ -218,12 +218,7 @@ class FeishuSheet:
             "Content-Type": "application/json; charset=utf-8"
         }
         
-        # 直接使用传入的字段配置
-        payload = field_config
-        
-        self.logger.info(f"Updating field with payload: {payload}")
-        
-        return self._make_request("PUT", url, headers, json=payload)
+        return self._make_request("PUT", url, headers, json=field_config)
 
     def get_bitable_fields(self, app_token: str, table_id: str) -> List[Dict]:
         """获取多维表格的字段（表头）配置
@@ -269,6 +264,98 @@ class FeishuSheet:
         }
         
         return self._make_request("POST", url, headers, json=field_config)
+
+    def delete_bitable_field(self, app_token: str, table_id: str, field_id: str) -> Dict:
+        """删除多维表格的字段
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            field_id: 要删除的字段 ID
+            
+        Returns:
+            Dict: API 响应结果
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/fields/{field_id}"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}"
+        }
+        
+        return self._make_request("DELETE", url, headers)
+
+    def batch_update_bitable(self, app_token: str, table_id: str, records: List[Dict]) -> Dict:
+        """批量更新多维表格记录
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            records: 要更新的记录列表，格式如：
+                    [{
+                        "record_id": "记录ID",
+                        "fields": {
+                            "字段名1": "新值1",
+                            "字段名2": "新值2"
+                        }
+                    }]
+            
+        Returns:
+            Dict: API 响应结果
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_update"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        return self._make_request("POST", url, headers, json={"records": records})
+
+    def delete_bitable_records(self, app_token: str, table_id: str, record_ids: List[str]) -> Dict:
+        """批量删除多维表格记录
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            record_ids: 要删除的记录ID列表
+            
+        Returns:
+            Dict: API 响应结果
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/records/batch_delete"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        return self._make_request("POST", url, headers, json={"records": record_ids})
+
+    def filter_bitable_records(self, app_token: str, table_id: str, filter_expr: str, 
+                             sort: List[Dict] = None, page_size: int = 100) -> Dict:
+        """按条件筛选多维表格记录
+        
+        Args:
+            app_token: 多维表格的应用 token
+            table_id: 表格 ID
+            filter_expr: 筛选表达式
+            sort: 排序配置，格式如：[{"field_name": "字段名", "order": "desc"}]
+            page_size: 每页记录数
+            
+        Returns:
+            Dict: API 响应结果
+        """
+        url = f"{self.base_url}/bitable/v1/apps/{app_token}/tables/{table_id}/records/list"
+        headers = {
+            "Authorization": f"Bearer {self._get_access_token()}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
+        
+        params = {
+            "filter": filter_expr,
+            "page_size": page_size
+        }
+        if sort:
+            params["sort"] = sort
+            
+        return self._make_request("GET", url, headers, params=params)
 
 def test_bitable():
     """测试多维表格的读写功能"""

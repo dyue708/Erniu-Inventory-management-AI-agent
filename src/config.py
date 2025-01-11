@@ -50,6 +50,18 @@ FEISHU_CONFIG = {
         "inventory": {  # 库存明细表
             "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
             "table_id": os.getenv("INVENTORY_BITABLE_ID")
+        },
+        "inventory_summary": {  # 库存汇总表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
+            "table_id": os.getenv("INVENTORY_SUMMARY_BITABLE_ID")
+        },
+        "inbound": {  # 入库明细表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
+            "table_id": os.getenv("INBOUND_BITABLE_ID")
+        },
+        "outbound": {  # 出库明细表
+            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
+            "table_id": os.getenv("OUTBOUND_BITABLE_ID")
         }
     }
 }
