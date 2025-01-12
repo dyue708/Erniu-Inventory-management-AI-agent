@@ -1,18 +1,32 @@
 import os
 from dotenv import load_dotenv
+import sys
+import logging
+from pathlib import Path
 
-# 加载环境变量
-load_dotenv()
+# 尝试加载 .env 文件（可选）
+def _try_load_env():
+    if getattr(sys, 'frozen', False):
+        base_path = Path(sys.executable).parent
+    else:
+        base_path = Path(__file__).parent.parent
 
-# 飞书配置
+    env_path = base_path / '.env'
+    if env_path.exists():
+        load_dotenv(env_path)
+
+# 加载环境变量（可选）
+_try_load_env()
+
+# 飞书配置 - 直接设置默认值
 FEISHU_CONFIG = {
     # App 凭证
-    "APP_ID": os.getenv("FEISHU_APP_ID"),
-    "APP_SECRET": os.getenv("FEISHU_APP_SECRET"),
+    "APP_ID": os.getenv("FEISHU_APP_ID"),  # 替换为实际的 APP_ID
+    "APP_SECRET": os.getenv("FEISHU_APP_SECRET"),  # 替换为实际的 APP_SECRET
     
     # 机器人配置
-    "VERIFICATION_TOKEN": os.getenv("FEISHU_VERIFICATION_TOKEN"),
-    "ENCRYPT_KEY": os.getenv("FEISHU_ENCRYPT_KEY"),
+    "VERIFICATION_TOKEN": os.getenv("FEISHU_VERIFICATION_TOKEN"),  # 替换为实际的 Token
+    "ENCRYPT_KEY": os.getenv("FEISHU_ENCRYPT_KEY"),  # 替换为实际的 Key
     # 表格配置
     "TABLES": {
         "warehouse": {  # 仓库管理表

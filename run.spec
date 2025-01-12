@@ -1,14 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*- 
- 
+
 import os 
 import sys 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules 
- 
-# 获取 Conda 环境路径 
-conda_prefix = r'D:\ProgramData\Anaconda3' 
- 
+
+# 使用系统 Python 路径
+system_python_path = r'D:\ProgramData\python3.10.6'
+
 block_cipher = None 
- 
+
 # 收集所有子模块 
 hidden_imports = collect_submodules('lark_oapi') + [ 
     'pandas', 
@@ -23,13 +23,11 @@ hidden_imports = collect_submodules('lark_oapi') + [
     'win32api', 
     'win32con', 
 ] 
- 
-# 收集数据文件 
-datas = [ 
-    ('.env', '.'), 
-] 
- 
-# 添加源代码文�?
+
+# 收集数据文件 - 移除 .env
+datas = [] 
+
+# 添加源代码文件
 src_files = [] 
 for root, dirs, files in os.walk('src'): 
     for file in files: 
@@ -37,13 +35,13 @@ for root, dirs, files in os.walk('src'):
             target_dir = os.path.relpath(root, '.') 
             src_files.append((os.path.join(root, file), target_dir)) 
 datas.extend(src_files) 
- 
-# 添加必要的DLL文件 
+
+# 添加必要的DLL文件 - 使用系统 Python 路径
 binaries = [ 
-    (os.path.join(conda_prefix, 'vcruntime140.dll'), '.'), 
-    (os.path.join(conda_prefix, 'python310.dll'), '.'), 
+    (os.path.join(system_python_path, 'vcruntime140.dll'), '.'), 
+    (os.path.join(system_python_path, 'python310.dll'), '.'), 
 ] 
- 
+
 a = Analysis( 
     ['run.py'], 
     pathex=['.', 'src'], 
@@ -59,9 +57,9 @@ a = Analysis(
     cipher=block_cipher, 
     noarchive=False, 
 ) 
- 
+
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher) 
- 
+
 exe = EXE( 
     pyz, 
     a.scripts, 
