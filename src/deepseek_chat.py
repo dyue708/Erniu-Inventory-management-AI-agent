@@ -413,16 +413,14 @@ class DeepSeekChat:
             if isinstance(message, str):
                 json_match = re.search(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
                 if not json_match:
-                    logger.error("消息中未找到 JSON 数据")
                     raise ValueError("消息中未找到 JSON 数据")
                 json_str = json_match.group(1).strip()
                 data = json.loads(json_str)
                 
-                # 确保数据是列表格式
                 if isinstance(data, dict):
                     data = [data]
                 
-                # 如果是出库操作，先检查所有商品的库存
+                # 检查出库库存
                 if data[0]['操作类型'] == '出库':
                     insufficient_stock = []
                     for record in data:
@@ -445,61 +443,49 @@ class DeepSeekChat:
                         error_msg += "\n请调整出库数量或等待库存补充。"
                         raise ValueError(error_msg)
 
-                # 为每条记录添加时间和用户标记
-                current_time = int(datetime.now().timestamp() * 1000)  # 毫秒级时间戳
+                # 处理记录
+                current_time = int(datetime.now().timestamp() * 1000)
                 processed_records = []
                 
                 for record in data:
                     record['操作时间'] = current_time
                     record['操作者ID'] = [{"id": self.current_user_id}] if self.current_user_id else []
                     
-                    # 验证数据完整性
                     if not self._validate_inventory_data(record):
-                        logger.error(f"数据验证失败: {record}")
                         continue
 
-                    # 转换日期为时间戳
                     try:
                         date_obj = datetime.strptime(record['出入库日期'], '%Y-%m-%d')
                         record['出入库日期'] = int(date_obj.timestamp() * 1000)
-                    except ValueError as e:
-                        logger.error(f"日期格式转换错误: {str(e)}")
+                    except ValueError:
                         continue
 
                     processed_records.append(record)
 
                 if not processed_records:
                     raise ValueError("没有有效的记录可以处理")
-
-                print(f"处理后的记录列表: {processed_records}")
                 
-                # 根据操作类型选择相应的管理器
+                # 写入记录
                 if processed_records[0]['操作类型'] == '入库':
                     manager = InboundManager()
                     if not manager.add_inbound(processed_records):
                         raise Exception("写入入库记录失败")
-                else:  # 出库
+                else:
                     manager = OutboundManager()
                     if not manager.add_outbound(processed_records):
                         raise Exception("写入出库记录失败")
 
-                logger.info(f"成功写入 {len(processed_records)} 条记录")
-
         except json.JSONDecodeError as e:
-            logger.error(f"JSON 解析错误: {str(e)}")
-            raise
+            raise ValueError("JSON 格式错误")
         except Exception as e:
-            logger.error(f"处理出入库记录时发生错误: {str(e)}")
             raise
 
     def _validate_inventory_data(self, data: dict) -> bool:
         """验证库存数据的完整性"""
         try:
-            # 如果收到的是列表，验证每个元素
             if isinstance(data, list):
                 return all(self._validate_inventory_data(item) for item in data)
             
-            # 基础必要字段列表
             base_fields = {
                 '出入库日期': str,
                 '商品ID': str,
@@ -508,27 +494,24 @@ class DeepSeekChat:
                 '操作类型': str,
             }
             
-            # 可选字段列表
             optional_fields = {
                 '快递单号': str,
                 '快递手机号': str
             }
             
-            # 验证并自动填充仓库信息
+            # 验证仓库信息
             if '仓库名' in data and data['仓库名']:
                 warehouse_info = self.warehouses[
                     self.warehouses['仓库名'] == data['仓库名']
                 ].iloc[0] if not self.warehouses.empty else None
                 
                 if warehouse_info is not None:
-                    # 自动填充仓库地址和备注
                     data['仓库地址'] = warehouse_info['仓库地址']
                     data['仓库备注'] = warehouse_info.get('仓库备注', '')
                 else:
-                    logger.info(f"找不到仓库信息: {data['仓库名']}")
                     return False
             
-            # 根据操作类型添加相应的必要字段
+            # 根据操作类型添加字段
             if data.get('操作类型') == '入库':
                 base_fields.update({
                     '入库数量': (int, float),
@@ -542,90 +525,61 @@ class DeepSeekChat:
                     '客户': str
                 })
             else:
-                logger.info("操作类型必须是'入库'或'出库'")
                 return False
             
-            # 检查所有必需字段是否存在且不为空
+            # 验证必要字段
             for field, field_type in base_fields.items():
                 if field not in data:
-                    logger.info(f"缺少必要字段: {field}")
                     return False
                 
-                # 对于商品ID，确保它是字符串类型
                 if field == '商品ID':
                     data[field] = str(data[field])
                 
                 if not isinstance(data[field], field_type):
                     if isinstance(field_type, tuple):
                         if not any(isinstance(data[field], t) for t in field_type):
-                            logger.info(f"字段 {field} 类型错误")
                             return False
                     else:
-                        logger.info(f"字段 {field} 类型错误")
                         return False
                 
-                # 检查字符串字段是否为空
                 if isinstance(data[field], str) and not data[field].strip():
-                    logger.info(f"必要字段 {field} 为空")
                     return False
             
-            # 检查可选字段的类型（如果存在的话）
+            # 验证可选字段
             for field, field_type in optional_fields.items():
-                if field in data and data[field]:  # 只在字段存在且不为空时验证类型
+                if field in data and data[field]:
                     if not isinstance(data[field], field_type):
-                        logger.info(f"可选字段 {field} 类型错误")
                         return False
                 else:
-                    # 如果可选字段不存在或为空，设置为空字符串
                     data[field] = ""
             
-            # 验证数字字段是否为正数
+            # 验证数值
             if data['操作类型'] == '入库':
-                if float(data['入库数量']) <= 0:
-                    logger.info("入库数量必须大于0")
+                if float(data['入库数量']) <= 0 or float(data['入库单价']) <= 0:
                     return False
-                if float(data['入库单价']) <= 0:
-                    logger.info("入库单价必须大于0")
-                    return False
-            else:  # 出库
-                if float(data['出库数量']) <= 0:
-                    logger.info("出库数量必须大于0")
-                    return False
-                if float(data['出库单价']) <= 0:
-                    logger.info("出库单价必须大于0")
+            else:
+                if float(data['出库数量']) <= 0 or float(data['出库单价']) <= 0:
                     return False
             
             return True
             
-        except Exception as e:
-            logger.error(f"数据验证过程中发生错误: {str(e)}")
+        except Exception:
             return False
 
     def _check_stock(self, product_id: str, warehouse: str, required_qty: float) -> tuple[bool, float]:
-        """检查商品库存是否充足
-        
-        Args:
-            product_id: 商品ID
-            warehouse: 仓库名
-            required_qty: 需要的数量
-            
-        Returns:
-            tuple[bool, float]: (是否充足, 当前库存)
-        """
+        """检查商品库存是否充足"""
         try:
             stock_df = self.inventory_manager.get_stock_summary(
                 product_id=product_id,
                 warehouse=warehouse
             )
-            
             if stock_df.empty:
                 return False, 0
             
             current_stock = float(stock_df['当前库存'].sum())
             return current_stock >= required_qty, current_stock
             
-        except Exception as e:
-            logger.error(f"检查库存时发生错误: {str(e)}")
+        except Exception:
             return False, 0
 
 
@@ -636,23 +590,18 @@ async def main():
     # 创建新会话
     session_id = "user_123"
     
-    # 发送消息
-    response = await deepseek.chat("你好！", session_id)
-    print(response)
+    # 测试库存检查功能
+    print("\n=== 测试库存检查功能 ===")
+    product_id = "1"
+    warehouse = "1号仓"
+    required_qty = 50.0
     
-    # 打印当前会话历史
-    deepseek.print_conversation(session_id)
+    has_stock, current_stock = deepseek._check_stock(product_id, warehouse, required_qty)
+    print(f"商品 {product_id} 在 {warehouse}:")
+    print(f"需求数量: {required_qty}")
+    print(f"当前库存: {current_stock}")
+    print(f"库存是否充足: {'是' if has_stock else '否'}")
     
-    # 继续对话（会保持上下文）
-    response = await deepseek.chat("请继续我们的对话", session_id)
-    print(response)
-    
-    # 清除会话历史
-    deepseek.clear_session(session_id)
-    
-    # 开始新对话
-    response = await deepseek.chat("这是一个新的对话", session_id)
-    print(response)
 
 if __name__ == "__main__":
     asyncio.run(main())

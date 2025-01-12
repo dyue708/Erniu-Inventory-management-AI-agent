@@ -685,7 +685,7 @@ class InventorySummaryManager(BaseTableManager):
             return False
 
     def get_stock_summary(self, product_id: str = None, warehouse: str = None) -> pd.DataFrame:
-        """获取库存汇总信息"""
+        """获取库存汇总信息，按商品ID和仓库名汇总"""
         try:
             config = self.bitable_config[self.TABLE_NAME]
             data = self.sheet_client.read_bitable(
@@ -695,19 +695,70 @@ class InventorySummaryManager(BaseTableManager):
             
             if not data or not data.get("items"):
                 return pd.DataFrame(columns=self.COLUMNS)
-            
+
             records = []
-            for item in data["items"]:
-                fields = item["fields"]
-                if (product_id and fields.get("商品ID") != product_id or
-                    warehouse and fields.get("仓库名") != warehouse):
-                    continue
-                    
-                records.append([
-                    fields.get(col, "") for col in self.COLUMNS
-                ])
+            seen_record_ids = set()
             
-            return pd.DataFrame(records, columns=self.COLUMNS)
+            for item in data["items"]:
+                record_id = item.get('record_id')
+                fields = item.get('fields', {})
+                
+                if record_id in seen_record_ids:
+                    continue
+                seen_record_ids.add(record_id)
+                
+                required_fields = ['商品ID', '商品名称', '仓库名', '当前库存', '累计入库数量', '累计出库数量']
+                if not all(field in fields for field in required_fields):
+                    continue
+                
+                current_product_id = str(fields.get('商品ID', '')).strip()
+                current_warehouse = str(fields.get('仓库名', '')).strip()
+                
+                if ((product_id is None or current_product_id == str(product_id).strip()) and
+                    (warehouse is None or current_warehouse == str(warehouse).strip())):
+                    try:
+                        record = {
+                            '商品ID': current_product_id,
+                            '商品名称': fields.get('商品名称', ''),
+                            '仓库名': current_warehouse,
+                            '当前库存': float(fields.get('当前库存', 0)),
+                            '累计入库数量': float(fields.get('累计入库数量', 0)),
+                            '累计出库数量': float(fields.get('累计出库数量', 0)),
+                            '入库单价': float(fields.get('入库单价', 0)),
+                            '入库总价': float(fields.get('入库总价', 0)),
+                            '出库总价': float(fields.get('出库总价', 0)),
+                            '最后更新时间': fields.get('最后更新时间', ''),
+                            '最后入库时间': fields.get('最后入库时间', ''),
+                            '最后出库时间': fields.get('最后出库时间', '')
+                        }
+                        
+                        if (record['当前库存'] >= 0 and 
+                            record['累计入库数量'] >= 0 and 
+                            record['累计出库数量'] >= 0):
+                            records.append(record)
+                    except (ValueError, TypeError):
+                        continue
+            
+            if not records:
+                return pd.DataFrame(columns=self.COLUMNS)
+            
+            df = pd.DataFrame(records)
+            if not df.empty:
+                grouped = df.groupby(['商品ID', '商品名称', '仓库名']).agg({
+                    '当前库存': 'sum',
+                    '累计入库数量': 'sum',
+                    '累计出库数量': 'sum',
+                    '入库总价': 'sum',
+                    '出库总价': 'sum',
+                    '入库单价': 'last',
+                    '最后更新时间': 'max',
+                    '最后入库时间': 'max',
+                    '最后出库时间': 'max'
+                }).reset_index()
+                
+                return grouped
+            
+            return pd.DataFrame(columns=self.COLUMNS)
             
         except Exception as e:
             print(f"获取库存汇总失败: {e}")
