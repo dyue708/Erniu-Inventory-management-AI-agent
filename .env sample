@@ -1,42 +1,33 @@
 # 飞书应用凭证
-FEISHU_APP_ID=cli_***76100d
-FEISHU_APP_SECRET=BZY***pjGG
+FEISHU_APP_ID=cli_a7f*****8500c             
+FEISHU_APP_SECRET=zwE6K4******6hhwd2        
 
-# # 飞书表格 token （已弃用）
-# FEISHU_SHEET_TOKEN=GYw***n5e
-
-# # 仓库管理表 （已弃用）
-# WAREHOUSE_SHEET_ID=ad8***9f
-
-# # 商品管理表 （已弃用）
-# PRODUCT_SHEET_ID=8Fi***JL
-
-# # 商品分类管理表 （已弃用）
-# CATEGORY_SHEET_ID=tt7***6
-
-# # 库存明细表 （已弃用）
-# INVENTORY_SHEET_ID=aX0***mV
+# 飞书机器人配置
+FEISHU_VERIFICATION_TOKEN=GDpTF3**********DcPX  
+FEISHU_ENCRYPT_KEY=EVRgt*********5ILQB             
 
 # 飞书多维表格配置
-FEISHU_BITABLE_APP_TOKEN=KuQ***nId
+FEISHU_BITABLE_APP_TOKEN=MiPB*****y0enMc
 
 # 仓库管理多维表格
-WAREHOUSE_BITABLE_ID=tbl***M8w
+WAREHOUSE_BITABLE_ID=tblY0*****dvUN
 
 # 商品管理多维表格
-PRODUCT_BITABLE_ID=tbl***xxx
+PRODUCT_BITABLE_ID=tblVf*****dgKP
 
-# 商品分类多维表格
-CATEGORY_BITABLE_ID=tbl***xxx
+# 库存汇总表
+INVENTORY_SUMMARY_BITABLE_ID=tblOg*****W00C
 
 # 库存明细多维表格
-INVENTORY_BITABLE_ID=tbl***hC8
+INVENTORY_BITABLE_ID=tblxJ*****pyju
 
-# 飞书事件订阅配置
-FEISHU_VERIFICATION_TOKEN=eCB***gd4
-FEISHU_ENCRYPT_KEY=cMt***tyf
+# 入库明细多维表格
+INBOUND_BITABLE_ID=tblr6*****XO08
 
-# DeepSeek API配置
-DEEPSEEK_API_KEY=sk-***004a
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
+# 出库明细多维表格
+OUTBOUND_BITABLE_ID=tblWj*****Qvu3
+
+# 深度求索配置
+DEEPSEEK_API_KEY=sk-b3e9*****564b57
+DEEPSEEK_BASE_URL="https://api.deepseek.com"
+DEEPSEEK_MODEL="deepseek-chat"

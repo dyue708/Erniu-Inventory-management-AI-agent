@@ -64,7 +64,7 @@ class BaseTableManager:
                     if desired_type == 5:  # 日期时间类型
                         field_config["property"] = {
                             "auto_fill": False,
-                            "date_formatter": "yyyy/MM/dd HH:mm"
+                            "date_formatter": "yyyy-MM-dd HH:mm"
                         }
                         # 出入库日期使用不同的格式
                         if field_name in ['出库日期', '入库日期']:
