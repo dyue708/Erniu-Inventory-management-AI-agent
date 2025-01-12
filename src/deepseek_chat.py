@@ -53,8 +53,8 @@ class DeepSeekChat:
 [
     {
         "操作类型": "入库或出库",
-        "出入库日期": "操作日期（YYYY-MM-DD格式，默认今天）",
-        "商品ID": "商品ID（文本格式）",
+        "出入库日期": "操作日期（YYYY-MM-DD格式，默认今天，不需要额外询问）",
+        "商品ID": "商品ID（如果未提供则根据商品名称自动匹配）",
         "商品名称": "商品名称",
         "入库数量": 数字类型的数量（入库时使用）,
         "出库数量": 数字类型的数量（出库时使用）,
@@ -143,6 +143,9 @@ class DeepSeekChat:
         self.inventory_manager = InventorySummaryManager()
         self.current_inventory_data = {}
         self.current_user_id = None
+        
+        # 添加 pending_data 字典用于存储待处理的数据
+        self.pending_data = {}
 
     def _get_warehouses(self) -> pd.DataFrame:
         """获取仓库信息"""
@@ -230,102 +233,41 @@ class DeepSeekChat:
         try:
             self.current_user_id = user_id
             today = datetime.now().strftime("%Y-%m-%d")
+            current_data = self.pending_data.get(user_id, [])
             
-            # 检查消息中是否包含JSON数据
-            json_data = None
-            if "<JSON>" in message and "</JSON>" in message:
-                # 打印原始消息以便调试
-                print(f"原始消息: {message}")
-                
-                json_matches = re.findall(r'<JSON>(.*?)</JSON>', message, re.DOTALL)
-                if json_matches:
-                    all_data = []
-                    for json_str in json_matches:
-                        try:
-                            data = json.loads(json_str.strip())
-                            # 如果是单个对象，转换为列表
-                            if isinstance(data, dict):
-                                data = [data]
-                            # 如果是列表，扩展到总列表中
-                            if isinstance(data, list):
-                                all_data.extend(data)
-                        except json.JSONDecodeError as e:
-                            print(f"JSON 解析错误: {str(e)}, 数据: {json_str}")
-                            continue
-                    
-                    if all_data:
-                        json_data = all_data
-                        print(f"解析后的完整数据列表: {json_data}")
-                        
-                        # 验证商品和仓库信息
-                        invalid_products = []
-                        missing_warehouse = False
-                        for data in json_data:
-                            # 检查商品是否存在
-                            if '商品名称' in data:
-                                product_name = data['商品名称']
-                                if not any(self.products['商品名称'].str.contains(product_name, case=False)):
-                                    invalid_products.append(product_name)
-                            
-                            # 检查仓库是否存在
-                            if '仓库名' in data and data['仓库名']:
-                                if not any(self.warehouses['仓库名'].str.contains(data['仓库名'], case=False)):
-                                    missing_warehouse = True
-                        
-                        # 如果有无效的商品或缺少仓库信息，构建提示信息
-                        if invalid_products or missing_warehouse:
-                            response = ""
-                            
-                            # 处理无效商品
-                            if invalid_products:
-                                response += "以下商品不在系统中：\n"
-                                for prod in invalid_products:
-                                    response += f"- {prod}\n"
-                                response += "\n可用的商品列表：\n"
-                                response += self._format_product_info()
-                                response += "\n请使用正确的商品名称。\n\n"
-                            
-                            # 处理缺少仓库信息
-                            if missing_warehouse:
-                                response += "仓库信息有误。可用的仓库列表：\n"
-                                response += self._format_warehouse_info()
-                                response += "\n请选择正确的仓库。\n"
-                            
-                            # 保留已收集的信息
-                            response += "\n当前已收集的信息：\n<JSON>\n"
-                            response += json.dumps(json_data, ensure_ascii=False, indent=2)
-                            response += "\n</JSON>\n"
-                            
-                            return response
+            # 构建消息
+            if current_data:
+                message = f"""基于之前的信息：
+<JSON>
+{json.dumps(current_data, ensure_ascii=False, indent=2)}
+</JSON>
 
+用户补充信息：{message}
+
+请合并上述信息，返回完整的JSON。如果信息不完整，请保持原有格式并提示缺失字段。"""
+            
+            # 构建消息历史
+            messages = []
+            if self.system_prompt:
+                # 添加今天的日期到系统提示词 还有仓库以及商品信息
+                final_system_prompt = f"{self.system_prompt}\n\n今天是 {today}\n\n可选仓库信息：\n{self._format_warehouse_info()}\n\n可选商品信息：\n{self._format_product_info()}"
+                messages.append({"role": "system", "content": final_system_prompt})
+            
+            conversation = self.get_conversation(user_id)
+            messages.extend(conversation)
+            messages.append({"role": "user", "content": message})
+            
             # 确保会话存在
             self.create_session(user_id)
-            conversation = self.get_conversation(user_id)
-            
-            # 生成最终的系统提示词
-            warehouse_info = self._format_warehouse_info()
-            product_info = self._format_product_info()
-            final_system_prompt = f"{self.system_prompt}\n\n今天是 {today}\n\n可用的仓库信息：\n{warehouse_info}\n\n相关商品信息：\n{product_info}"
             
             # 打印当前上下文信息
             print("\n=== Current Context ===")
             print(f"Session ID: {user_id}")
-            print(f"System Prompt: {final_system_prompt}")
+            print(f"System Prompt: {self.system_prompt}")
             print(f"History Length: {len(conversation)}")
             print(f"Current Message: {message}")
             print("=" * 50)
 
-            # 构建消息历史
-            messages = []
-            if final_system_prompt:
-                messages.append({"role": "system", "content": final_system_prompt})
-            
-            # 添加历史消息
-            messages.extend(conversation)
-            
-            # 添加用户消息
-            messages.append({"role": "user", "content": message})
-            
             try:
                 async with httpx.AsyncClient() as client:
                     response = await client.post(
@@ -372,10 +314,10 @@ class DeepSeekChat:
                                             self._write_inventory_record(assistant_message)
                                             # 写入成功后的处理
                                             self.clear_session(user_id)
-                                            if final_system_prompt:
+                                            if self.system_prompt:
                                                 self.conversations[user_id].append({
                                                     "role": "system", 
-                                                    "content": final_system_prompt
+                                                    "content": self.system_prompt
                                                 })
                                         except Exception as e:
                                             # 写入失败时，修改 AI 的回复

@@ -436,10 +436,10 @@ class OutboundManager(BaseTableManager):
             for record in successful_records:
                 try:
                     record_id = record['response']['data']['records'][0]['record_id']
-                    self.sheet_client.delete_bitable(
+                    self.sheet_client.delete_bitable_records(
                         app_token=config["app_token"],
                         table_id=config["table_id"],
-                        record_id=record_id
+                        record_ids=[record_id]  # 需要传入列表
                     )
                     print(f"成功回滚记录: {record_id}")
                 except Exception as e:
