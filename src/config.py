@@ -27,25 +27,6 @@ FEISHU_CONFIG = {
     # 机器人配置
     "VERIFICATION_TOKEN": os.getenv("FEISHU_VERIFICATION_TOKEN"),  # 替换为实际的 Token
     "ENCRYPT_KEY": os.getenv("FEISHU_ENCRYPT_KEY"),  # 替换为实际的 Key
-    # 表格配置
-    "TABLES": {
-        "warehouse": {  # 仓库管理表
-            "spreadsheet_token": os.getenv("FEISHU_SHEET_TOKEN"),
-            "sheet_id": os.getenv("WAREHOUSE_SHEET_ID")
-        },
-        "product": {    # 商品管理表
-            "spreadsheet_token": os.getenv("FEISHU_SHEET_TOKEN"),
-            "sheet_id": os.getenv("PRODUCT_SHEET_ID")
-        },
-        "category": {   # 商品分类管理表
-            "spreadsheet_token": os.getenv("FEISHU_SHEET_TOKEN"),
-            "sheet_id": os.getenv("CATEGORY_SHEET_ID")
-        },
-        "inventory": {  # 库存明细表
-            "spreadsheet_token": os.getenv("FEISHU_SHEET_TOKEN"),
-            "sheet_id": os.getenv("INVENTORY_SHEET_ID")
-        }
-    },
     
     # 多维表格配置
     "BITABLES": {
@@ -56,10 +37,6 @@ FEISHU_CONFIG = {
         "product": {    # 商品管理表
             "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"), 
             "table_id": os.getenv("PRODUCT_BITABLE_ID")
-        },
-        "category": {   # 商品分类管理表
-            "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
-            "table_id": os.getenv("CATEGORY_BITABLE_ID")
         },
         "inventory": {  # 库存明细表
             "app_token": os.getenv("FEISHU_BITABLE_APP_TOKEN"),
