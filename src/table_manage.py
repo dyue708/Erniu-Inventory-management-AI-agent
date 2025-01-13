@@ -7,8 +7,7 @@ class BaseTableManager:
     def __init__(self):
         self.sheet_client = FeishuSheet(
             app_id=FEISHU_CONFIG["APP_ID"],
-            app_secret=FEISHU_CONFIG["APP_SECRET"],
-            tables_config=FEISHU_CONFIG["TABLES"]
+            app_secret=FEISHU_CONFIG["APP_SECRET"]
         )
         self.bitable_config = FEISHU_CONFIG["BITABLES"]
         # Add column validation

@@ -11,7 +11,6 @@ class FeishuSheet:
         self.base_url = "https://open.feishu.cn/open-apis"
         self.token = None
         self.token_expire_time = None
-        self.tables = tables_config or {}
         self.max_retries = 3
         self.timeout = 10  # 请求超时时间（秒）
         # logging.basicConfig(level=logging.INFO)
