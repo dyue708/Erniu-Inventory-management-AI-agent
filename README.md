@@ -8,6 +8,8 @@
 - 📦 支持商品、仓库、分类等基础信息管理
 - 🤖 集成深度求索 AI，支持智能对话查询
 - ⚡ 实时消息通知和处理
+- 📈 支持商品出入库管理，出库时实时计算单笔利润
+- 📉 同一商品不同定价时，优先按照入库单价高者出库
 
 ## 配置指南
 
@@ -87,15 +89,20 @@ pip install -r requirements.txt
 1. 复制 `.env.sample` 为 `.env`
 2. 配置以下环境变量：
 ```
+# 飞书应用配置
 FEISHU_APP_ID=cli_a7******76100d
 FEISHU_APP_SECRET=BZYg***********************pjGG
+FEISHU_VERIFICATION_TOKEN=eCBE********************Wgd4
+FEISHU_ENCRYPT_KEY=cMt1******************6voTyf
+
+# 飞书表格配置
 FEISHU_SHEET_TOKEN=GYw9s*************6cKgnYn5e
 WAREHOUSE_SHEET_ID=ad8f**
 PRODUCT_SHEET_ID=8Fis**
 CATEGORY_SHEET_ID=tt7Q**
 INVENTORY_SHEET_ID=aX0S**
-FEISHU_VERIFICATION_TOKEN=eCBE********************Wgd4
-FEISHU_ENCRYPT_KEY=cMt1******************6voTyf
+
+# Deepseek 配置
 DEEPSEEK_API_KEY=sk-6d0*********************004a
 DEEPSEEK_BASE_URL="https://api.deepseek.com"
 DEEPSEEK_MODEL="deepseek-chat"
@@ -105,9 +112,9 @@ DEEPSEEK_MODEL="deepseek-chat"
 
 1. 启动前检查：
    - ✅ 飞书应用状态（已上线或测试状态）
-   - ✅ 机器人已添加到目标群组
    - ✅ 表格权限配置完成
    - ✅ Deepseek API 配置有效
+   - ✅ 飞书机器人已添加到目标群组
 
 2. 运行服务：
 ```bash
