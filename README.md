@@ -3,8 +3,11 @@
 基于飞书表格的智能库存管理系统，集成了深度求索 AI 对话功能。
 
 ## 系统特性
-
-- 📊 基于飞书表格的库存数据管理
+- 🖥️ 本地运行，无需服务器和域名
+- 💰 唯一成本为按量使用的AI接口调用费用
+- 👥 适合小团队协作管理商品出入库
+- 🛠️ 可自定义飞书多维表格的可视化拓展
+- 📊 基于飞书表格进行库存数据管理
 - 📦 支持商品、仓库、分类等基础信息管理
 - 🤖 集成深度求索 AI，支持智能对话查询
 - ⚡ 实时消息通知和处理
@@ -45,10 +48,8 @@
 
 #### 1.5 飞书表格准备
 创建并配置以下表格：
-- 商品信息表(products)
-- 仓库信息表(warehouses)
-- 库存记录表(inventory)
-
+可使用模板
+https://ccn1hpzj4iz4.feishu.cn/base/DyAYb1D2RaYcbQsjdsdcZOEOnad?table=tblZiGbWquMGu3jB&view=vewHk4ASHw
 > 📝 **表格链接说明**  
 > 示例链接：https://example.feishu.cn/base/xxxxxxxxxxxxxxxxxxxxxx/table/tblxxxxxxxxxxxxxx
 > - `xxxxxxxxxxxxxxxxxxxxxx` = app_token
@@ -116,7 +117,9 @@ DEEPSEEK_MODEL="deepseek-chat"
    - ✅ Deepseek API 配置有效
    - ✅ 飞书机器人已添加到目标群组
 
-2. 运行服务：
+2.根据自己的需要配置商品表 以及 仓库管理表信息
+
+3. 运行服务：
 ```bash
 python run.py
 ```
