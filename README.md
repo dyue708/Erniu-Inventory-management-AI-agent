@@ -28,18 +28,43 @@
 3. 开启机器人功能
 
 #### 1.3 权限配置
-必需权限：
-- im:message
-- im:message.group_at_msg
-- im:message.p2p_msg
-- sheet:read
-- sheet:write
-- im:resource
-- im:chat
-- im:chat.member
+权限配置：
+```json
+{
+  "scopes": {
+    "tenant": [
+      "aily:message:write",
+      "base:app:update",
+      "base:table:create",
+      "base:table:read",
+      "base:table:update",
+      "bitable:app",
+      "im:chat",
+      "im:message",
+      "im:message.group_at_msg:readonly",
+      "im:message.group_msg",
+      "im:message.p2p_msg:readonly",
+      "im:message:readonly"
+    ],
+    "user": [
+      "aily:message:write",
+      "base:app:update",
+      "base:table:create",
+      "base:table:read",
+      "base:table:update",
+      "bitable:app",
+      "im:chat",
+      "im:message",
+      "im:message:readonly"
+    ]
+  }
+}
+```
 
 #### 1.4 事件订阅
-1. 配置 Webhook URL（运行 message_store_bot.py 后获取）
+1. 配置 Webhook URL
+https://open.feishu.cn/api-explorer/loading 
+或者运行 message_store_bot.py 后获取
 2. 设置验证 token 和加密 key
 3. 订阅以下事件：
    - im.message.receive_v1
@@ -127,3 +152,5 @@ python run.py
 服务将启动：
 - 消息存储服务：接收并存储飞书消息
 - 消息处理服务：处理库存相关指令
+
+发送消息到飞书群组，或者私聊对应机器人，即可触发机器人处理库存相关指令
