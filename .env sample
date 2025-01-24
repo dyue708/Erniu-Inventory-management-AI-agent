@@ -18,9 +18,6 @@ PRODUCT_BITABLE_ID=tblVf*****dgKP
 # 库存汇总表
 INVENTORY_SUMMARY_BITABLE_ID=tblOg*****W00C
 
-# 库存明细多维表格
-INVENTORY_BITABLE_ID=tblxJ*****pyju
-
 # 入库明细多维表格
 INBOUND_BITABLE_ID=tblr6*****XO08
 
