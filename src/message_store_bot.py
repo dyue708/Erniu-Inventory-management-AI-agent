@@ -4,7 +4,7 @@ import json
 import logging
 # 导入飞书配置信息
 from config import FEISHU_CONFIG
-
+from lark_oapi.event.dispatcher_handler import P2ApplicationBotMenuV6
 # 设置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -78,7 +78,10 @@ class FeishuBot:
         try:
             # 从消息数据中提取用户ID
             data_dict = json.loads(message_data) if isinstance(message_data, str) else message_data
-            sender_id = data_dict.get('event', {}).get('sender', {}).get('sender_id', {}).get('open_id', 'unknown')
+            if message_type == 'bot_menu_event':
+                sender_id = data_dict.get('event', {}).get('operator', {}).get('operator_id', {}).get('open_id', 'unknown')
+            else:
+                sender_id = data_dict.get('event', {}).get('sender', {}).get('sender_id', {}).get('open_id', 'unknown')
         except json.JSONDecodeError as e:
             logger.error(f"解析消息数据失败: {str(e)}")
             sender_id = 'unknown'
@@ -128,10 +131,19 @@ class FeishuBot:
         except Exception as e:
             logger.error(f"处理群组消息失败: {str(e)}", exc_info=True)
 
+
+    def _handle_bot_menu_event(self, data: P2ApplicationBotMenuV6) -> None:
+        """Handle bot menu event"""
+        try:
+            message_data = lark.JSON.marshal(data)
+            self._save_message_to_file(message_data, 'bot_menu_event')
+        except Exception as e:
+            logger.error(f"Failed to handle bot menu event: {str(e)}", exc_info=True)
+
     def _create_event_handler(self):
-        """创建事件分发处理器
+        """Create event dispatcher handler
         Returns:
-            EventDispatcherHandler: 事件处理器实例
+            EventDispatcherHandler: Event handler instance
         """
         try:
             handler = lark.EventDispatcherHandler.builder(
@@ -151,10 +163,13 @@ class FeishuBot:
             
             # 注册消息回应事件处理器
             handler.register_p1_customized_event('im.message.reaction.created_v1', self._handle_message_reaction)
+                        
+            # 注册菜单操作事件处理器
+            handler.register_p2_application_bot_menu_v6(self._handle_bot_menu_event)
             
             return handler.build()
         except Exception as e:
-            logger.error(f"创建事件处理器失败: {str(e)}", exc_info=True)
+            logger.error(f"Failed to create event handler: {str(e)}", exc_info=True)
             raise
     
     def _create_client(self):

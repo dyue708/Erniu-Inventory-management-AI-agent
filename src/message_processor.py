@@ -75,6 +75,46 @@ class MessageProcessor:
             logger.error("Error sending message: %s", str(e), exc_info=True)
             return False
 
+    def send_interactive_message(self, receive_id, content, chat_type="p2p"):
+        try:
+            logger.info("Attempting to send interactive message to %s: %s", chat_type, receive_id)
+            from lark_oapi.api.im.v1 import CreateMessageRequest, CreateMessageRequestBody
+
+            # 根据消息类型设置 receive_id_type
+            receive_id_type = "open_id" if chat_type == "p2p" else "chat_id"
+
+            # 使用 builder 模式构建请求体
+            request_body = CreateMessageRequestBody.builder() \
+                .receive_id(receive_id) \
+                .msg_type("interactive") \
+                .content(content) \
+                .build()
+
+            # 构建完整请求
+            request = CreateMessageRequest.builder() \
+                .receive_id_type(receive_id_type) \
+                .request_body(request_body) \
+                .build()
+
+            logger.info("Sending interactive request...")
+            response = self.client.im.v1.message.create(request)
+            
+            # 详细记录响应信息
+            if not response.success():
+                logger.error(
+                    f"Send interactive message failed, code: {response.code}, "
+                    f"msg: {response.msg}, "
+                    f"log_id: {response.get_log_id()}"
+                )
+                return False
+            
+            logger.info("Interactive message sent successfully")
+            return True
+
+        except Exception as e:
+            logger.error("Error sending interactive message: %s", str(e), exc_info=True)
+            return False
+
     def stop(self):
         """安全停止处理循环"""
         self._should_stop = True
@@ -142,6 +182,28 @@ class MessageProcessor:
                                     logger.info("AI reply sent successfully")
                                 else:
                                     logger.error("Failed to send AI reply")
+                            
+                            elif message.get("type") == "bot_menu_event":
+                                event_data = json.loads(message["data"])
+                                event = event_data["event"]
+                                if event.get("event_key") == "INBOUND":
+                                    receive_id = event["operator"]["operator_id"]["open_id"]
+                                    content = json.dumps({
+                                        "type": "template",
+                                        "data": {
+                                            "template_id": "AAqFiZ6OERcyC",
+                                            "template_version_name": "1.0.2",
+                                            "template_variable": {
+                                                "key1": "value1",
+                                                "key2": "value2"
+                                            }
+                                        }
+                                    }, ensure_ascii=False)
+                                    
+                                    if self.send_interactive_message(receive_id, content, "p2p"):
+                                        logger.info("Interactive message sent successfully")
+                                    else:
+                                        logger.error("Failed to send interactive message")
                             
                             # 处理完成后删除文件
                             os.remove(msg_file)
