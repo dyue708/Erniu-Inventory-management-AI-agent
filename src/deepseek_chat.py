@@ -97,8 +97,8 @@ class DeepSeekChat:
 </JSON>
 {操作类型}信息已收集完整，我已记录。
 {操作类型}商品明细:
-1. {商品名称1}: {数量1}
-2. {商品名称2}: {数量2}
+1. {商品名称1}-- 数量 :{数量1} 单价 :{单价}  {仓库名}
+2. {商品名称2}-- 数量 :{数量2} 单价 :{单价}  {仓库名}
 ...
 
 2. 如果信息不完整：
@@ -119,11 +119,11 @@ class DeepSeekChat:
 - {商品名称2}
 ...
 以下是可用的商品列表：
-{可用商品列表}
+{可用商品列表}（请使用商品名称）
 
 4. 如果仓库名称不正确：
 抱歉，仓库名称不存在。可用的仓库列表：
-{仓库列表}
+{仓库列表}（请使用仓库名称）
 
 5. 如果库存不足（出库时）：
 抱歉，以下商品库存不足：
@@ -317,12 +317,13 @@ class DeepSeekChat:
                                         try:
                                             self._write_inventory_record(assistant_message)
                                             # 写入成功后的处理
+                                            success_message = "✔数据已成功写入"
+                                            if data[0]['操作类型'] == '入库':
+                                                success_message += "入库表。"
+                                            else:
+                                                success_message += "出库表。"
+                                            assistant_message += f"\n\n{success_message}"
                                             self.clear_session(user_id)
-                                            if self.system_prompt:
-                                                self.conversations[user_id].append({
-                                                    "role": "system", 
-                                                    "content": self.system_prompt
-                                                })
                                         except Exception as e:
                                             # 写入失败时，修改 AI 的回复
                                             error_msg = f"\n\n写入失败: {str(e)}\n请重新提交。"
