@@ -2,6 +2,9 @@
 import lark_oapi as lark
 import json
 import logging
+import time
+from datetime import datetime  # 添加 datetime 导入
+import os
 # 导入飞书配置信息
 from config import FEISHU_CONFIG
 from lark_oapi.event.dispatcher_handler import P2ApplicationBotMenuV6
@@ -24,6 +27,9 @@ class FeishuBot:
             encrypt_key: 加密密钥
             config: 配置字典，如果单独参数未提供则从此处读取
         """
+        # 添加防重复点击字典
+        self._menu_click_cache = {}
+        self._menu_click_timeout = 3  # 设置3秒的防重复间隔
         try:
             # 优先使用单独传入的参数，其次使用config字典，最后使用默认配置
             self.config = self._resolve_config(
@@ -31,6 +37,10 @@ class FeishuBot:
             )
             self.event_handler = self._create_event_handler()
             self.client = self._create_client()
+            # 确保消息存储目录存在
+            self.messages_dir = os.path.abspath("messages")
+            os.makedirs(self.messages_dir, exist_ok=True)
+            logger.info(f"消息存储目录: {self.messages_dir}")
         except Exception as e:
             logger.error(f"初始化飞书机器人失败: {str(e)}", exc_info=True)
             raise
@@ -66,51 +76,58 @@ class FeishuBot:
             raise
 
     def _save_message_to_file(self, message_data: dict, message_type: str):
-        """将消息保存到本地文件，按用户分类存储
-        Args:
-            message_data: 消息数据
-            message_type: 消息类型
-        """
-        import json
-        from datetime import datetime
-        import os
-
+        """将消息保存到本地文件，按用户分类存储"""
         try:
             # 从消息数据中提取用户ID
             data_dict = json.loads(message_data) if isinstance(message_data, str) else message_data
-            if message_type == 'bot_menu_event':
+            
+            # 根据不同的消息类型获取用户ID
+            if message_type == 'card_action':
+                # 卡片操作事件的用户ID路径
+                sender_id = data_dict.get('raw_data', {}).get('event', {}).get('operator', {}).get('open_id', 'unknown')
+            elif message_type == 'bot_menu_event':
                 sender_id = data_dict.get('event', {}).get('operator', {}).get('operator_id', {}).get('open_id', 'unknown')
             else:
                 sender_id = data_dict.get('event', {}).get('sender', {}).get('sender_id', {}).get('open_id', 'unknown')
+                
+            logger.debug(f"Extracted sender_id: {sender_id} for message type: {message_type}")
+
+            try:
+                # 创建用户专属的消息目录
+                user_message_dir = os.path.join(self.messages_dir, sender_id)
+                os.makedirs(user_message_dir, exist_ok=True)
+                logger.debug(f"Created user directory: {user_message_dir}")
+                
+                # 生成带时间戳的文件名
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+                filename = os.path.join(user_message_dir, f'message_{timestamp}.json')
+                
+                # 准备写入的数据
+                data = {
+                    'type': message_type,
+                    'timestamp': datetime.now().isoformat(),
+                    'sender_id': sender_id,
+                    'data': message_data
+                }
+                
+                # 写入文件
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                    
+                logger.info(f"Message saved to {filename}")
+                # 验证文件是否成功创建
+                if os.path.exists(filename):
+                    logger.info(f"Verified: File {filename} was created successfully")
+                else:
+                    logger.error(f"File {filename} was not created!")
+                
+            except Exception as e:
+                logger.error(f"保存消息到文件失败: {str(e)}", exc_info=True)
+                
         except json.JSONDecodeError as e:
             logger.error(f"解析消息数据失败: {str(e)}")
-            sender_id = 'unknown'
         except Exception as e:
             logger.error(f"提取用户ID失败: {str(e)}")
-            sender_id = 'unknown'
-
-        try:
-            # 创建用户专属的消息目录
-            user_message_dir = os.path.join('messages', sender_id)
-            os.makedirs(user_message_dir, exist_ok=True)
-            
-            # 生成带时间戳的文件名
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
-            filename = os.path.join(user_message_dir, f'message_{timestamp}.json')
-            
-            # 准备写入的数据
-            data = {
-                'type': message_type,
-                'timestamp': datetime.now().isoformat(),
-                'sender_id': sender_id,
-                'data': message_data
-            }
-            
-            # 写入文件
-            with open(filename, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            logger.error(f"保存消息到文件失败: {str(e)}", exc_info=True)
 
     def _do_p2_im_message_receive_v1(self, data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         """处理P2P消息接收事件"""
@@ -133,18 +150,48 @@ class FeishuBot:
 
 
     def _handle_bot_menu_event(self, data: P2ApplicationBotMenuV6) -> None:
-        """Handle bot menu event"""
+        """Handle bot menu event with debounce mechanism"""
         try:
+            # 提取操作者ID和事件key
+            operator_id = data.event.operator.operator_id.open_id
+            event_key = data.event.event_key
+            
+            # 生成唯一的操作标识
+            operation_key = f"{operator_id}_{event_key}"
+            current_time = time.time()
+            
+            # 检查是否在防重复时间窗口内
+            if operation_key in self._menu_click_cache:
+                last_click_time = self._menu_click_cache[operation_key]
+                if current_time - last_click_time < self._menu_click_timeout:
+                    logger.info(f"Ignoring duplicate menu click from {operator_id} for {event_key}")
+                    return
+            
+            # 更新最后点击时间
+            self._menu_click_cache[operation_key] = current_time
+            
+            # 清理过期的缓存记录
+            self._clean_click_cache()
+            
+            # 处理消息
             message_data = lark.JSON.marshal(data)
             self._save_message_to_file(message_data, 'bot_menu_event')
+            
         except Exception as e:
             logger.error(f"Failed to handle bot menu event: {str(e)}", exc_info=True)
+    
+    def _clean_click_cache(self):
+        """清理过期的点击记录"""
+        current_time = time.time()
+        expired_keys = [
+            key for key, timestamp in self._menu_click_cache.items()
+            if current_time - timestamp >= self._menu_click_timeout
+        ]
+        for key in expired_keys:
+            del self._menu_click_cache[key]
 
     def _create_event_handler(self):
-        """Create event dispatcher handler
-        Returns:
-            EventDispatcherHandler: Event handler instance
-        """
+        """Create event dispatcher handler"""
         try:
             handler = lark.EventDispatcherHandler.builder(
                 self.config["VERIFICATION_TOKEN"],
@@ -167,11 +214,14 @@ class FeishuBot:
             # 注册菜单操作事件处理器
             handler.register_p2_application_bot_menu_v6(self._handle_bot_menu_event)
             
+            # 注册卡片操作事件处理器 - 使用正确的注册方法
+            handler.register_p2_card_action_trigger(self._handle_card_action)
+            
             return handler.build()
         except Exception as e:
             logger.error(f"Failed to create event handler: {str(e)}", exc_info=True)
             raise
-    
+
     def _create_client(self):
         """创建飞书客户端
         Returns:
@@ -219,6 +269,41 @@ class FeishuBot:
             # 在这里添加具体的处理逻辑
         except Exception as e:
             logger.error(f"处理消息回应事件失败: {str(e)}", exc_info=True)
+
+    def _handle_card_action(self, data: lark.CustomizedEvent) -> None:
+        """处理卡片操作事件，仅负责存储"""
+        try:
+            # 解析卡片操作数据
+            message_data = lark.JSON.marshal(data)
+            data_dict = json.loads(message_data)
+            
+            # 获取操作者信息（从事件数据中获取）
+            operator = data_dict.get('event', {}).get('operator', {})
+            operator_id = operator.get('open_id')  # 一定会有 open_id
+            
+            # 获取操作类型和表单数据
+            action = data_dict.get('event', {}).get('action', {})
+            action_tag = action.get('tag', '')
+            
+            # 记录原始数据用于调试
+            logger.info(f"Received card action data: {json.dumps(data_dict, ensure_ascii=False)}")
+            
+            # 只处理提交按钮的点击事件
+            if action_tag == "button":
+                # 构建保存数据
+                save_data = {
+                    'type': 'card_action',
+                    'timestamp': datetime.now().isoformat(),
+                    'operator_id': operator_id,
+                    'raw_data': data_dict
+                }
+                
+                # 保存到文件（按用户ID存储）
+                self._save_message_to_file(save_data, 'card_action')
+                logger.info(f"Card action saved for user: {operator_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to handle card action: {str(e)}", exc_info=True)
 
 def main():
     """主函数，创建并启动消息存储机器人"""

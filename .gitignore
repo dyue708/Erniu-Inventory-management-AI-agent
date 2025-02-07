@@ -12,3 +12,7 @@ build/
 build/*
 dist/*
 dist
+message_archives/*
+message_archives
+messages
+messages/*

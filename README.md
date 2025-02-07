@@ -112,7 +112,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. 环境配置
-1. 复制 `.env.sample` 为 `.env`
+1. 复制 `.env.example` 为 `.env`
 2. 配置以下环境变量：
 ```
 # 飞书应用配置
