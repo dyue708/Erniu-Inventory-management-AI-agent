@@ -204,7 +204,7 @@ class InboundManager(BaseTableManager):
                     new_record = [{
                         "fields": {
                             "入库单号": inbound_no,  # 使用同一个入库单号
-                            "入库日期": fields.get('出入库日期', ''),
+                            "入库日期": fields.get('入库日期', fields.get('出入库日期', '')),  # 优先使用入库日期字段
                             "快递单号": fields.get('快递单号', ''),
                             "快递手机号": fields.get('快递手机号', ''),
                             "供应商": fields.get('供应商', ''),
