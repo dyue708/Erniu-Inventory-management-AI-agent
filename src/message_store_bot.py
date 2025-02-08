@@ -8,6 +8,11 @@ import os
 # 导入飞书配置信息
 from config import FEISHU_CONFIG
 from lark_oapi.event.dispatcher_handler import P2ApplicationBotMenuV6
+# 添加新的导入
+from lark_oapi.event.callback.model.p2_card_action_trigger import (
+    P2CardActionTrigger,
+    P2CardActionTriggerResponse,
+)
 # 设置日志
 logging.basicConfig(
     level=logging.INFO,
@@ -83,8 +88,8 @@ class FeishuBot:
             
             # 根据不同的消息类型获取用户ID
             if message_type == 'card_action':
-                # 卡片操作事件的用户ID路径
-                sender_id = data_dict.get('raw_data', {}).get('event', {}).get('operator', {}).get('open_id', 'unknown')
+                # 卡片操作事件的用户ID直接从 message_data 获取
+                sender_id = message_data.get('operator_id', 'unknown')
             elif message_type == 'bot_menu_event':
                 sender_id = data_dict.get('event', {}).get('operator', {}).get('operator_id', {}).get('open_id', 'unknown')
             else:
@@ -115,19 +120,12 @@ class FeishuBot:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                     
                 logger.info(f"Message saved to {filename}")
-                # 验证文件是否成功创建
-                if os.path.exists(filename):
-                    logger.info(f"Verified: File {filename} was created successfully")
-                else:
-                    logger.error(f"File {filename} was not created!")
                 
             except Exception as e:
                 logger.error(f"保存消息到文件失败: {str(e)}", exc_info=True)
                 
-        except json.JSONDecodeError as e:
-            logger.error(f"解析消息数据失败: {str(e)}")
         except Exception as e:
-            logger.error(f"提取用户ID失败: {str(e)}")
+            logger.error(f"提取用户ID失败: {str(e)}", exc_info=True)
 
     def _do_p2_im_message_receive_v1(self, data: lark.im.v1.P2ImMessageReceiveV1) -> None:
         """处理P2P消息接收事件"""
@@ -193,6 +191,7 @@ class FeishuBot:
     def _create_event_handler(self):
         """Create event dispatcher handler"""
         try:
+            # 创建事件处理器
             handler = lark.EventDispatcherHandler.builder(
                 self.config["VERIFICATION_TOKEN"],
                 self.config["ENCRYPT_KEY"]
@@ -201,7 +200,7 @@ class FeishuBot:
             # 注册 P2P 消息接收事件
             handler.register_p2_im_message_receive_v1(self._do_p2_im_message_receive_v1)
             
-            # 注册群组消息接收事件（合并了自定义消息处理）
+            # 注册群组消息接收事件
             handler.register_p1_customized_event('im.message.receive_v1', self._do_group_message_receive)
             
             # 注册机器人群组事件处理器
@@ -210,29 +209,27 @@ class FeishuBot:
             
             # 注册消息回应事件处理器
             handler.register_p1_customized_event('im.message.reaction.created_v1', self._handle_message_reaction)
-                        
+            
             # 注册菜单操作事件处理器
             handler.register_p2_application_bot_menu_v6(self._handle_bot_menu_event)
             
-            # 注册卡片操作事件处理器 - 使用正确的注册方法
+            # 修改：使用正确的方式注册卡片操作事件处理器
             handler.register_p2_card_action_trigger(self._handle_card_action)
             
             return handler.build()
+            
         except Exception as e:
             logger.error(f"Failed to create event handler: {str(e)}", exc_info=True)
             raise
 
     def _create_client(self):
-        """创建飞书客户端
-        Returns:
-            Client: 飞书客户端实例
-        """
+        """创建飞书客户端"""
         try:
             return lark.ws.Client(
                 self.config["APP_ID"],
                 self.config["APP_SECRET"],
                 event_handler=self.event_handler,
-                log_level=lark.LogLevel.INFO
+                log_level=lark.LogLevel.DEBUG  # 修改为 DEBUG 级别以获取更多日志信息
             )
         except Exception as e:
             logger.error(f"创建飞书客户端失败: {str(e)}", exc_info=True)
@@ -270,40 +267,42 @@ class FeishuBot:
         except Exception as e:
             logger.error(f"处理消息回应事件失败: {str(e)}", exc_info=True)
 
-    def _handle_card_action(self, data: lark.CustomizedEvent) -> None:
-        """处理卡片操作事件，仅负责存储"""
+    def _handle_card_action(self, data: P2CardActionTrigger) -> P2CardActionTriggerResponse:
+        """处理卡片操作事件，仅存储表单数据并返回响应"""
         try:
-            # 解析卡片操作数据
-            message_data = lark.JSON.marshal(data)
-            data_dict = json.loads(message_data)
+            action = data.event.action
+            form_data = action.form_value
+            operator_id = data.event.operator.open_id
             
-            # 获取操作者信息（从事件数据中获取）
-            operator = data_dict.get('event', {}).get('operator', {})
-            operator_id = operator.get('open_id')  # 一定会有 open_id
+            # 构建保存数据
+            save_data = {
+                'type': 'card_action',
+                'timestamp': datetime.now().isoformat(),
+                'operator_id': operator_id,
+                'action_value': action.value,
+                'form_data': form_data,
+                'raw_data': lark.JSON.marshal(data)
+            }
             
-            # 获取操作类型和表单数据
-            action = data_dict.get('event', {}).get('action', {})
-            action_tag = action.get('tag', '')
+            # 保存到文件
+            self._save_message_to_file(save_data, 'card_action')
             
-            # 记录原始数据用于调试
-            logger.info(f"Received card action data: {json.dumps(data_dict, ensure_ascii=False)}")
-            
-            # 只处理提交按钮的点击事件
-            if action_tag == "button":
-                # 构建保存数据
-                save_data = {
-                    'type': 'card_action',
-                    'timestamp': datetime.now().isoformat(),
-                    'operator_id': operator_id,
-                    'raw_data': data_dict
+            # 只返回简单的成功响应
+            return P2CardActionTriggerResponse({
+                "toast": {
+                    "type": "success",
+                    "content": "提交成功！"
                 }
-                
-                # 保存到文件（按用户ID存储）
-                self._save_message_to_file(save_data, 'card_action')
-                logger.info(f"Card action saved for user: {operator_id}")
+            })
             
         except Exception as e:
-            logger.error(f"Failed to handle card action: {str(e)}", exc_info=True)
+            logger.error(f"处理卡片操作失败: {e}", exc_info=True)
+            return P2CardActionTriggerResponse({
+                "toast": {
+                    "type": "error",
+                    "content": f"处理失败：{str(e)}"
+                }
+            })
 
 def main():
     """主函数，创建并启动消息存储机器人"""

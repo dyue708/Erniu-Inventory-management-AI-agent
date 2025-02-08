@@ -13,11 +13,13 @@ from table_manage import WarehouseManager, ProductManager, InboundManager, Inven
 from asyncio import Lock
 from collections import defaultdict
 from lark_oapi.api.im.v1 import *
+from typing import Optional, Dict, Any
+import traceback
 
 # 设置日志
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
@@ -94,120 +96,94 @@ class MessageProcessor:
                                 message = json.load(f)
                             
                             # 解析飞书消息格式
-                            if message.get("type") == "card.action.trigger":
-                                event_data = message.get("event", {})
-                                action = event_data.get("action", {})
-                                operator = event_data.get("operator", {})
-                                operator_id = operator.get("open_id")
-                                message_id = event_data.get("message_id")  # 获取消息ID
+                            # 处理卡片操作
+                            if message.get("type") == "card_action":
+                                print("开始处理卡片操作...")  # 调试日志
                                 
-                                if action.get("tag") == "button":
-                                    value = action.get("value", {})
-                                    if value.get("form_type") == "inbound" and value.get("tag") == "submit":
-                                        try:
-                                            # 获取表单数据
-                                            form_data = action.get("form_data", {})
-                                            warehouse_data = json.loads(form_data.get("warehouse", "{}"))
-                                            product_data = json.loads(form_data.get("product", "{}"))
-                                            quantity = float(form_data.get("quantity", 0))
-                                            price = float(form_data.get("price", 0))
-                                            supplier = form_data.get("supplier", "")
-                                            tracking = form_data.get("tracking", "")
-                                            phone = form_data.get("phone", "")
-                                            batch_complete = value.get("batch_complete", True)
-                                            current_time = int(datetime.now().timestamp() * 1000)
+                                data = message.get("data", {})
+                                operator_id = data.get("operator_id")
+                                action_value = data.get("action_value", {})
+                                form_data = data.get("form_data", {})
+                                
+                                print(f"操作者ID: {operator_id}")  # 调试日志
+                                print(f"操作值: {action_value}")  # 调试日志
+                                print(f"表单数据: {form_data}")  # 调试日志
+                                
+                                if action_value.get("action") == "inbound_submit":
+                                    try:
+                                        print("处理入库表单提交...")  # 调试日志
+                                        
+                                        # 获取表单数据
+                                        warehouse_data = json.loads(form_data.get("warehouse", "{}"))
+                                        product_data = json.loads(form_data.get("product", "{}"))
+                                        quantity = float(form_data.get("quantity", 0))
+                                        price = float(form_data.get("price", 0))
+                                        supplier = form_data.get("supplier", "")
+                                        tracking = form_data.get("tracking", "")
+                                        phone = form_data.get("phone", "")
+                                        batch_complete = action_value.get("batch_complete", True)
+                                        
+                                        # 获取或生成入库单号
+                                        raw_data = json.loads(data.get("raw_data", "{}"))
+                                        message_id = raw_data.get("event", {}).get("context", {}).get("open_message_id", "")
+                                        
+                                        # 如果是继续入库（batch_complete为False），使用相同的入库单号
+                                        if not batch_complete and message_id:
+                                            inbound_id = f"IN-{message_id[-14:]}"  # 使用消息ID的后14位作为入库单号
+                                        else:
+                                            inbound_id = f"IN-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                                        
+                                        current_time = int(datetime.now().timestamp())  # 秒级时间戳，不是毫秒
+                                        
+                                        # 构造入库数据
+                                        inbound_data = [{
+                                            "fields": {
+                                                "入库单号": inbound_id,
+                                                "入库日期": current_time,  # 秒级时间戳
+                                                "快递单号": tracking,
+                                                "快递手机号": phone,
+                                                "供应商": supplier,
+                                                "商品ID": product_data.get("product_id"),
+                                                "商品名称": product_data.get("product_name"),
+                                                "入库数量": float(quantity),  # 确保是数字类型
+                                                "入库单价": float(price),    # 确保是数字类型
+                                                "入库总价": float(quantity) * float(price),  # 添加入库总价
+                                                "仓库名": warehouse_data.get("warehouse"),
+                                                "仓库备注": warehouse_data.get("warehouse_note"),
+                                                "仓库地址": warehouse_data.get("warehouse_address"),
+                                                "操作者ID": [{"id": operator_id}],
+                                                "操作时间": current_time  # 秒级时间戳
+                                            }
+                                        }]
 
-                                            # 构造入库数据
-                                            inbound_data = [{
-                                                "fields": {
-                                                    "入库日期": current_time,
-                                                    "快递单号": tracking,
-                                                    "快递手机号": phone,
-                                                    "供应商": supplier,
-                                                    "商品ID": product_data.get("product_id"),
-                                                    "商品名称": product_data.get("product_name"),
-                                                    "入库数量": quantity,
-                                                    "入库单价": price,
-                                                    "仓库名": warehouse_data.get("warehouse"),
-                                                    "仓库备注": warehouse_data.get("warehouse_note"),
-                                                    "仓库地址": warehouse_data.get("warehouse_address"),
-                                                    "操作者ID": operator_id,
-                                                    "操作时间": current_time
-                                                }
-                                            }]
+                                        print(f"构造的入库数据: {json.dumps(inbound_data, ensure_ascii=False, indent=2)}")  # 调试日志
+                                        
+                                        # 使用入库管理器处理入库
+                                        print("开始写入入库表...")  # 调试日志
+                                        inbound_mgr = InboundManager()
+                                        if await asyncio.to_thread(inbound_mgr.add_inbound, inbound_data):
+                                            print("入库数据写入成功")  # 调试日志
+                                            # 发送成功消息
+                                            await self.send_text_message(
+                                                receive_id=operator_id,
+                                                content=(
+                                                    f"入库信息已收集完整，我已记录。\n"
+                                                    f"入库商品明细:\n"
+                                                    f"1. {product_data['product_name']} {product_data.get('product_spec', '')} "
+                                                    f"-- 数量: {quantity} 单价: {price}  {warehouse_data['warehouse']}\n"
+                                                    f"✔数据已成功写入入库表。"
+                                                )
+                                            )
+                                        else:
+                                            raise Exception("入库处理失败")
 
-                                            # 记录入库信息
-                                            logger.info(f"Processing inbound submission: {json.dumps(inbound_data, ensure_ascii=False)}")
+                                    except Exception as e:
+                                        logger.error(f"处理入库提交失败: {e}")
+                                        await self.send_text_message(
+                                            receive_id=operator_id,
+                                            content=f"❌ 入库提交失败: {str(e)}\n请重试或联系管理员"
+                                        )
                                             
-                                            # 使用入库管理器处理入库
-                                            inbound_mgr = InboundManager()
-                                            if await asyncio.to_thread(inbound_mgr.add_inbound, inbound_data):
-                                                # 构造已禁用的卡片
-                                                disabled_card = self.generate_disabled_inbound_form(
-                                                    warehouse_data=warehouse_data,
-                                                    product_data=product_data,
-                                                    quantity=quantity,
-                                                    price=price,
-                                                    supplier=supplier,
-                                                    tracking=tracking,
-                                                    phone=phone
-                                                )
-                                                
-                                                # 更新卡片消息
-                                                await self.update_card_message(
-                                                    message_id=message_id,
-                                                    card_content=disabled_card
-                                                )
-                                                
-                                                # 发送成功消息
-                                                await self.send_text_message(
-                                                    receive_id=operator_id,
-                                                    content="✅ 入库信息已提交成功！"
-                                                )
-
-                                                # 如果不是批次完成，则生成新的入库表单
-                                                if not batch_complete:
-                                                    tracking_info = {
-                                                        "tracking": tracking,
-                                                        "phone": phone
-                                                    }
-                                                    new_card = self.generate_inbound_form(tracking_info=tracking_info)
-                                                    if new_card:
-                                                        await self.send_card_message(
-                                                            receive_id=operator_id,
-                                                            card_content=new_card
-                                                        )
-                                            else:
-                                                raise Exception("入库处理失败")
-
-                                        except Exception as e:
-                                            logger.error(f"处理入库提交失败: {e}")
-                                            await self.send_text_message(
-                                                receive_id=operator_id,
-                                                content=f"❌ 入库提交失败: {str(e)}\n请重试或联系管理员"
-                                            )
-                                    
-                                    elif value.get("form_type") == "inbound" and value.get("tag") == "next":
-                                        # 处理"入库下一个商品"的逻辑
-                                        try:
-                                            # 生成新的入库表单
-                                            card = self.generate_inbound_form()
-                                            if card:
-                                                await self.send_card_message(
-                                                    receive_id=operator_id,
-                                                    card_content=card
-                                                )
-                                            else:
-                                                await self.send_text_message(
-                                                    receive_id=operator_id,
-                                                    content="❌ 生成新表单失败，请重试"
-                                                )
-                                        except Exception as e:
-                                            logger.error(f"生成新表单失败: {e}")
-                                            await self.send_text_message(
-                                                receive_id=operator_id,
-                                                content="❌ 生成新表单失败，请重试"
-                                            )
                             elif message.get("type") in ["p2p_message", "message"]:  # 添加 "message" 类型支持群消息
                                 event_data = json.loads(message["data"])
                                 event = event_data["event"]
@@ -342,172 +318,216 @@ class MessageProcessor:
 
             # 构建入库表单卡片
             card = {
+                "schema": "2.0",
+                "config": {
+                    "update_multi": True
+                },
                 "header": {
                     "title": {
                         "tag": "plain_text",
                         "content": "入库表单" if not tracking_info else "入库表单（批次继续）"
                     },
-                    "template": "blue"
+                    "template": "blue",
+                    "padding": "12px 12px 12px 12px"
                 },
-                "elements": [
-                    {
-                        "tag": "div",
-                        "text": {
-                            "tag": "lark_md",
-                            "content": "请填写以下入库信息："
-                        }
-                    },
-                    # 商品选择
-                    {
-                        "tag": "div",
-                        "text": {
-                            "tag": "lark_md",
-                            "content": "**商品选择**"
-                        }
-                    },
-                    {
-                        "tag": "select_static",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请选择商品"
-                        },
-                        "value": {
-                            "key": "product"
-                        },
-                        "options": product_options
-                    },
-                    # 数量和单价
-                    {
-                        "tag": "div",
-                        "text": {
-                            "tag": "lark_md",
-                            "content": "**数量和单价**"
-                        }
-                    },
-                    {
-                        "tag": "input",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请输入数量"
-                        },
-                        "value": {
-                            "key": "quantity"
-                        },
-                        "type": "number"
-                    },
-                    {
-                        "tag": "input",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请输入单价"
-                        },
-                        "value": {
-                            "key": "price"
-                        },
-                        "type": "number"
-                    },
-                    # 仓库选择
-                    {
-                        "tag": "div",
-                        "text": {
-                            "tag": "lark_md",
-                            "content": "**仓库选择**"
-                        }
-                    },
-                    {
-                        "tag": "select_static",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请选择仓库"
-                        },
-                        "value": {
-                            "key": "warehouse"
-                        },
-                        "options": warehouse_options
-                    },
-                    # 供应商信息
-                    {
-                        "tag": "div",
-                        "text": {
-                            "tag": "lark_md",
-                            "content": "**供应商信息**"
-                        }
-                    },
-                    {
-                        "tag": "input",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请输入供应商"
-                        },
-                        "value": {
-                            "key": "supplier"
-                        }
-                    },
-                    # 快递信息
-                    {
-                        "tag": "div",
-                        "text": {
-                            "tag": "lark_md",
-                            "content": "**快递信息**"
-                        }
-                    },
-                    {
-                        "tag": "input",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请输入快递单号"
-                        },
-                        "value": {
-                            "key": "tracking",
-                            "text": tracking_info["tracking"] if tracking_info else ""
-                        },
-                        "disabled": True if tracking_info else False
-                    },
-                    {
-                        "tag": "input",
-                        "placeholder": {
-                            "tag": "plain_text",
-                            "content": "请输入快递手机号"
-                        },
-                        "value": {
-                            "key": "phone",
-                            "text": tracking_info["phone"] if tracking_info else ""
-                        },
-                        "disabled": True if tracking_info else False
-                    },
-                    # 按钮组
-                    {
-                        "tag": "action",
-                        "actions": [
-                            {
-                                "tag": "button",
-                                "text": {
-                                    "tag": "plain_text",
-                                    "content": "提交并完成入库"
+                "body": {
+                    "direction": "vertical",
+                    "padding": "12px 12px 12px 12px",
+                    "elements": [
+                        {
+                            "tag": "form",
+                            "name": "inbound_form",
+                            "elements": [
+                                # 商品选择标题
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "lark_md",
+                                        "content": "**商品选择**"
+                                    }
                                 },
-                                "type": "primary",
-                                "value": {
-                                    "tag": "submit",
-                                    "form_type": "inbound",
-                                    "batch_complete": True
-                                }
-                            },
-                            {
-                                "tag": "button",
-                                "text": {
-                                    "tag": "plain_text",
-                                    "content": "提交并继续入库"
+                                # 商品选择
+                                {
+                                    "tag": "select_static",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择商品"
+                                    },
+                                    "options": product_options,
+                                    "width": "default",
+                                    "name": "product",
+                                    "margin": "0px 0px 12px 0px"
                                 },
-                                "type": "default",
-                                "value": {
-                                    "tag": "submit",
-                                    "form_type": "inbound",
-                                    "batch_complete": False
+                                # 数量和单价标题
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "lark_md",
+                                        "content": "**数量和单价**"
+                                    }
+                                },
+                                # 数量
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入数量"
+                                    },
+                                    "width": "default",
+                                    "name": "quantity",
+                                    "margin": "0px 0px 8px 0px"
+                                },
+                                # 单价
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入单价"
+                                    },
+                                    "width": "default",
+                                    "name": "price",
+                                    "margin": "0px 0px 12px 0px"
+                                },
+                                # 仓库选择标题
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "lark_md",
+                                        "content": "**仓库选择**"
+                                    }
+                                },
+                                # 仓库选择
+                                {
+                                    "tag": "select_static",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择仓库"
+                                    },
+                                    "options": warehouse_options,
+                                    "width": "default",
+                                    "name": "warehouse",
+                                    "margin": "0px 0px 12px 0px"
+                                },
+                                # 供应商标题
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "lark_md",
+                                        "content": "**供应商信息**"
+                                    }
+                                },
+                                # 供应商
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入供应商"
+                                    },
+                                    "width": "default",
+                                    "name": "supplier",
+                                    "margin": "0px 0px 12px 0px"
+                                },
+                                # 快递信息标题
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "lark_md",
+                                        "content": "**快递信息**"
+                                    }
+                                },
+                                # 快递单号
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入快递单号"
+                                    },
+                                    "default_value": tracking_info["tracking"] if tracking_info else "",
+                                    "disabled": True if tracking_info else False,
+                                    "width": "default",
+                                    "name": "tracking",
+                                    "margin": "0px 0px 8px 0px"
+                                },
+                                # 快递手机号
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入快递手机号"
+                                    },
+                                    "default_value": tracking_info["phone"] if tracking_info else "",
+                                    "disabled": True if tracking_info else False,
+                                    "width": "default",
+                                    "name": "phone",
+                                    "margin": "0px 0px 12px 0px"
+                                },
+                                # 按钮组
+                                {
+                                    "tag": "column_set",
+                                    "columns": [
+                                        {
+                                            "tag": "column",
+                                            "width": "auto",
+                                            "elements": [
+                                                {
+                                                    "tag": "button",
+                                                    "text": {
+                                                        "tag": "plain_text",
+                                                        "content": "完成入库"
+                                                    },
+                                                    "type": "primary",
+                                                    "width": "default",
+                                                    "behaviors": [
+                                                        {
+                                                            "type": "callback",
+                                                            "value": {
+                                                                "action": "inbound_submit",
+                                                                "batch_complete": True
+                                                            }
+                                                        }
+                                                    ],
+                                                    "form_action_type": "submit",
+                                                    "name": "Button_m6u7pw1v"
+                                                }
+                                            ],
+                                            "vertical_align": "top"
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "auto",
+                                            "elements": [
+                                                {
+                                                    "tag": "button",
+                                                    "text": {
+                                                        "tag": "plain_text",
+                                                        "content": "继续入库"
+                                                    },
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "behaviors": [
+                                                        {
+                                                            "type": "callback",
+                                                            "value": {
+                                                                "action": "inbound_submit",
+                                                                "batch_complete": False
+                                                            }
+                                                        }
+                                                    ],
+                                                    "form_action_type": "submit",
+                                                    "name": "Button_m6u7pw1w"
+                                                }
+                                            ],
+                                            "vertical_align": "top"
+                                        }
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
                                 }
-                            }
-                        ]
-                    }
-                ]
+                            ],
+                            "padding": "4px 0px 4px 0px",
+                            "margin": "0px 0px 0px 0px"
+                        }
+                    ]
+                }
             }
             
             return card
@@ -575,30 +595,167 @@ class MessageProcessor:
             raw_data = form_data.get('raw_data', {})
             action = raw_data.get('event', {}).get('action', {})
             
-            # 只处理提交按钮的点击事件
+            # 打印调试信息
+            logger.info(f"Received card action: {json.dumps(action, ensure_ascii=False)}")
+            
+            # 检查是否是按钮点击事件
             if action.get('tag') == 'button':
-                form_values = action.get('value', {})
-                if form_values.get('submit'):
-                    form_type = form_values.get('form_type')
+                # 获取按钮的值
+                value = action.get('value', {})
+                logger.info(f"Button value: {json.dumps(value, ensure_ascii=False)}")
+                
+                # 获取表单数据
+                form_data = raw_data.get('event', {}).get('action', {}).get('form_data', {})
+                logger.info(f"Form data: {json.dumps(form_data, ensure_ascii=False)}")
+                
+                # 检查表单类型
+                if value.get('form_type') == 'inbound':
+                    # 构造完整的表单值
+                    form_values = {
+                        'form_data': form_data,
+                        'batch_complete': value.get('batch_complete', True),
+                        'message_id': raw_data.get('event', {}).get('message_id')  # 添加消息ID
+                    }
                     
-                    if form_type == 'inbound':
-                        # 处理入库表单
-                        await self._handle_inbound_form(operator_id, form_values)
-                    elif form_type == 'outbound':
-                        # 处理出库表单
-                        await self._handle_outbound_form(operator_id, form_values)
-                    
+                    # 处理入库表单
+                    await self._handle_inbound_form(operator_id, form_values)
+                elif value.get('form_type') == 'outbound':
+                    # 处理出库表单
+                    await self._handle_outbound_form(operator_id, form_values)
+                
         except Exception as e:
-            logger.error(f"处理卡片操作失败: {e}")
+            logger.error(f"处理卡片操作失败: {e}", exc_info=True)
+            if operator_id:
+                await self.send_text_message(
+                    receive_id=operator_id,
+                    content=f"❌ 处理表单失败: {str(e)}\n请重试或联系管理员"
+                )
 
     async def _handle_inbound_form(self, operator_id: str, form_values: dict) -> None:
         """处理入库表单数据（异步方法）"""
         try:
-            # TODO: 处理入库逻辑
-            logger.info(f"收到入库表单数据: {form_values}")
+            # 获取表单数据
+            form_data = form_values.get('form_data', {})
+            
+            # 检查必填字段
+            required_fields = {
+                'warehouse': '仓库',
+                'product': '商品',
+                'quantity': '数量',
+                'price': '单价',
+                'supplier': '供应商'
+            }
+            
+            missing_fields = []
+            for field, name in required_fields.items():
+                if not form_data.get(field):
+                    missing_fields.append(name)
+            
+            if missing_fields:
+                # 情况3：缺少必填信息
+                error_msg = f"❌ 请填写以下必填信息：{', '.join(missing_fields)}"
+                await self.send_text_message(
+                    receive_id=operator_id,
+                    content=error_msg
+                )
+                return
+            
+            try:
+                # 解析数据
+                warehouse_data = json.loads(form_data.get('warehouse', '{}'))
+                product_data = json.loads(form_data.get('product', '{}'))
+                quantity = float(form_data.get('quantity', 0))
+                price = float(form_data.get('price', 0))
+                supplier = form_data.get('supplier', '')
+                tracking = form_data.get('tracking', '')
+                phone = form_data.get('phone', '')
+                batch_complete = form_values.get('batch_complete', True)  # 是否完成批次
+                current_time = int(datetime.now().timestamp())  # 秒级时间戳，不是毫秒
+                
+                # 构造入库数据
+                inbound_data = [{
+                    "fields": {
+                        "入库日期": current_time,  # 秒级时间戳
+                        "快递单号": tracking,
+                        "快递手机号": phone,
+                        "供应商": supplier,
+                        "商品ID": product_data.get("product_id"),
+                        "商品名称": product_data.get("product_name"),
+                        "入库数量": float(quantity),  # 确保是数字类型
+                        "入库单价": float(price),    # 确保是数字类型
+                        "入库总价": float(quantity) * float(price),  # 添加入库总价
+                        "仓库名": warehouse_data.get("warehouse"),
+                        "仓库备注": warehouse_data.get("warehouse_note"),
+                        "仓库地址": warehouse_data.get("warehouse_address"),
+                        "操作者ID": [{"id": operator_id}],
+                        "操作时间": current_time  # 秒级时间戳
+                    }
+                }]
+                
+                # 使用入库管理器处理入库
+                inbound_mgr = InboundManager()
+                if await asyncio.to_thread(inbound_mgr.add_inbound, inbound_data):
+                    # 构造已禁用的卡片
+                    disabled_card = self.generate_disabled_inbound_form(
+                        warehouse_data=warehouse_data,
+                        product_data=product_data,
+                        quantity=quantity,
+                        price=price,
+                        supplier=supplier,
+                        tracking=tracking,
+                        phone=phone
+                    )
+                    
+                    # 更新卡片消息为禁用状态
+                    await self.update_card_message(
+                        message_id=form_values.get('message_id'),
+                        card_content=disabled_card
+                    )
+                    
+                    if batch_complete:
+                        # 情况1：完成提交
+                        await self.send_text_message(
+                            receive_id=operator_id,
+                            content="✅ 入库信息已提交成功！"
+                        )
+                    else:
+                        # 情况2：继续提交下一个商品
+                        await self.send_text_message(
+                            receive_id=operator_id,
+                            content="✅ 当前商品入库信息已记录，请继续填写下一个商品"
+                        )
+                        
+                        # 生成新的入库表单，保留快递信息
+                        tracking_info = {
+                            "tracking": tracking,
+                            "phone": phone
+                        }
+                        new_card = self.generate_inbound_form(tracking_info=tracking_info)
+                        if new_card:
+                            await self.send_card_message(
+                                receive_id=operator_id,
+                                card_content=new_card
+                            )
+                        else:
+                            await self.send_text_message(
+                                receive_id=operator_id,
+                                content="❌ 生成新表单失败，请重试"
+                            )
+                else:
+                    raise Exception("入库处理失败")
+                
+            except (ValueError, json.JSONDecodeError) as e:
+                await self.send_text_message(
+                    receive_id=operator_id,
+                    content=f"❌ 数据格式错误: {str(e)}\n请检查输入内容"
+                )
             
         except Exception as e:
             logger.error(f"处理入库表单失败: {e}")
+            await self.send_text_message(
+                receive_id=operator_id,
+                content=f"❌ 入库提交失败: {str(e)}\n请重试或联系管理员"
+            )
 
     async def _handle_outbound_form(self, operator_id: str, form_values: dict) -> None:
         """处理出库表单数据（异步方法）"""
@@ -852,6 +1009,78 @@ class MessageProcessor:
         except Exception as e:
             logger.error(f"生成已禁用入库表单失败: {e}")
             return None
+
+    def _process_card_action(self, message_data: Dict[str, Any]) -> bool:
+        """处理卡片操作消息"""
+        try:
+            print("\n开始处理卡片操作...")  # 调试日志
+            print(f"接收到的消息数据: {json.dumps(message_data, ensure_ascii=False, indent=2)}")  # 调试日志
+            
+            data = message_data['data']
+            form_data = data['form_data']
+            operator_id = data['operator_id']
+            current_time = int(datetime.now().timestamp())  # 秒级时间戳，不是毫秒
+            
+            print("解析表单数据...")  # 调试日志
+            # 解析表单数据
+            product = json.loads(form_data['product'])
+            warehouse = json.loads(form_data['warehouse'])
+            quantity = float(form_data['quantity'])
+            price = float(form_data['price'])
+            supplier = form_data.get('supplier', '')
+            tracking = form_data.get('tracking', '')
+            phone = form_data.get('phone', '')
+            
+            print(f"解析后的数据:\n产品: {product}\n仓库: {warehouse}\n数量: {quantity}\n价格: {price}")  # 调试日志
+            
+            # 构造入库数据
+            inbound_data = [{
+                "fields": {
+                    "入库日期": current_time,  # 秒级时间戳
+                    "快递单号": tracking,
+                    "快递手机号": phone,
+                    "供应商": supplier,
+                    "商品ID": product.get("product_id"),
+                    "商品名称": product.get("product_name"),
+                    "入库数量": float(quantity),  # 确保是数字类型
+                    "入库单价": float(price),    # 确保是数字类型
+                    "入库总价": float(quantity) * float(price),  # 添加入库总价
+                    "仓库名": warehouse.get("warehouse"),
+                    "仓库备注": warehouse.get("warehouse_note"),
+                    "仓库地址": warehouse.get("warehouse_address"),
+                    "操作者ID": [{"id": operator_id}],
+                    "操作时间": current_time  # 秒级时间戳
+                }
+            }]
+
+            print(f"构造的入库数据: {json.dumps(inbound_data, ensure_ascii=False, indent=2)}")  # 调试日志
+
+            # 使用入库管理器处理入库
+            print("开始写入入库表...")  # 调试日志
+            inbound_mgr = InboundManager()
+            if inbound_mgr.add_inbound(inbound_data):
+                print("入库数据写入成功")  # 调试日志
+                # 发送确认消息
+                confirmation_message = (
+                    f"入库信息已收集完整，我已记录。\n"
+                    f"入库商品明细:\n"
+                    f"1. {product['product_name']} {product.get('product_spec', '')} "
+                    f"-- 数量: {quantity} 单价: {price}  {warehouse['warehouse']}\n"
+                    f"✔数据已成功写入入库表。"
+                )
+                
+                self._send_message(operator_id, confirmation_message)
+                return True
+            else:
+                print("入库数据写入失败")  # 调试日志
+                raise Exception("入库处理失败")
+            
+        except Exception as e:
+            print(f"处理卡片操作时出错: {str(e)}")  # 调试日志
+            # 发送错误消息给用户
+            if 'operator_id' in locals():
+                self._send_message(operator_id, f"❌ 处理入库信息时出错: {str(e)}\n请联系管理员。")
+            return False
 
 if __name__ == "__main__":
     processor = MessageProcessor(
