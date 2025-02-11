@@ -449,6 +449,31 @@ class OutboundManager(BaseTableManager):
         except Exception as e:
             print(f"回滚过程中发生错误: {str(e)}")
 
+    def get_outbound_details(self, outbound_id: str) -> list:
+        """获取指定出库单号的所有出库记录"""
+        try:
+            config = self.bitable_config[self.TABLE_NAME]
+            data = self.sheet_client.read_bitable(
+                app_token=config["app_token"],
+                table_id=config["table_id"]
+            )
+            
+            if not data or not data.get("items"):
+                return []
+            
+            # 筛选指定出库单号的记录
+            outbound_records = []
+            for item in data["items"]:
+                fields = item.get("fields", {})
+                if fields.get("出库单号") == outbound_id:
+                    outbound_records.append(item)
+                
+            return outbound_records
+        
+        except Exception as e:
+            logger.error(f"获取出库明细失败: {e}", exc_info=True)
+            return []
+
 class ProductManager(BaseTableManager):
     TABLE_NAME = "product"
     COLUMNS = ['商品ID', '商品名称', '商品分类', '商品规格', '商品单位', '商品备注']

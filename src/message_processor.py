@@ -406,6 +406,53 @@ class MessageProcessor:
                                         outbound_mgr = OutboundManager()
                                         if outbound_mgr.add_outbound(outbound_records):
                                             try:
+                                                # 获取出库明细记录
+                                                outbound_details = outbound_mgr.get_outbound_details(outbound_id)
+
+                                                # 按商品分组显示
+                                                product_groups = {}
+                                                for record in outbound_details:
+                                                    fields = record["fields"]
+                                                    product_id = fields["商品ID"]
+                                                    if product_id not in product_groups:
+                                                        product_groups[product_id] = []
+                                                    product_groups[product_id].append(fields)
+
+                                                logger.info("Product groups: %s", json.dumps(product_groups, indent=2, ensure_ascii=False))
+
+                                                # 添加商品明细
+                                                total_amount = 0
+                                                details_content = ""
+
+                                                # 遍历每个商品组
+                                                for product_id, records in product_groups.items():
+                                                    product_info = records[0]  # 获取第一条记录的商品信息
+                                                    warehouse_name = product_info['仓库名']
+                                                    details_content += f"\n**{product_info['商品名称']}** | {warehouse_name}\n"
+                                                    
+                                                    group_total_qty = sum(float(r['出库数量']) for r in records)
+                                                    group_total_amount = sum(float(r['出库总价']) for r in records)
+                                                    total_amount += group_total_amount
+                                                    
+                                                    details_content += (
+                                                        f"  总数量: {group_total_qty:.0f} | "
+                                                        f"总金额: ¥{group_total_amount:.2f}\n"
+                                                    )
+                                                    
+                                                    # 显示每条出库记录的详细信息
+                                                    for record in records:
+                                                        cost_price = float(record['入库单价'])
+                                                        out_price = float(record['出库单价'])
+                                                        out_qty = float(record['出库数量'])
+                                                        profit = (out_price - cost_price) * out_qty
+                                                        
+                                                        details_content += (
+                                                            f"    - 入库价: ¥{cost_price:.2f} | "
+                                                            f"出库价: ¥{out_price:.2f} | "
+                                                            f"出库数量: {out_qty:.0f} | "
+                                                            f"毛利: ¥{profit:.2f}\n"
+                                                        )
+
                                                 # 生成成功消息卡片
                                                 success_content = {
                                                     "schema": "2.0",
@@ -438,64 +485,6 @@ class MessageProcessor:
                                                         ]
                                                     }
                                                 }
-                                                
-                                                # 按商品分组显示
-                                                product_groups = {}
-                                                for record in outbound_records:
-                                                    fields = record["fields"]
-                                                    product_id = fields["商品ID"]
-                                                    if product_id not in product_groups:
-                                                        product_groups[product_id] = []
-                                                    product_groups[product_id].append(fields)
-                                                
-                                                logger.info("Product groups: %s", json.dumps(product_groups, indent=2, ensure_ascii=False))
-                                                
-                                                # 添加商品明细
-                                                total_amount = 0
-                                                details_content = ""
-                                                
-                                                # 遍历每个商品组
-                                                for product_id, records in product_groups.items():
-                                                    product_info = records[0]  # 获取第一条记录的商品信息
-                                                    warehouse_name = product_info['仓库名']
-                                                    details_content += f"\n**{product_info['商品名称']}** | {warehouse_name}\n"
-                                                    
-                                                    group_total_qty = sum(float(r['出库数量']) for r in records)
-                                                    group_total_amount = sum(float(r['出库总价']) for r in records)
-                                                    total_amount += group_total_amount
-                                                    
-                                                    details_content += (
-                                                        f"  总数量: {group_total_qty:.0f} | "
-                                                        f"总金额: ¥{group_total_amount:.2f}\n"
-                                                    )
-                                                    
-                                                    # 获取该商品的库存信息（包含入库单价）
-                                                    inventory_mgr = InventorySummaryManager()
-                                                    stock_df = inventory_mgr.get_stock_summary(
-                                                        product_id=product_id,
-                                                        warehouse=warehouse_name
-                                                    )
-                                                    
-                                                    # 对每条出库记录，显示从哪些入库批次中扣减
-                                                    for record in records:
-                                                        out_qty = float(record['出库数量'])
-                                                        out_price = float(record['出库单价'])
-                                                        
-                                                        details_content += f"  出库明细 (单价: ¥{out_price:.2f}):\n"
-                                                        details_content += "    📊 出库记录：\n"
-                                                        
-                                                        # 显示按入库单价排序的出库记录
-                                                        for _, stock in stock_df.iterrows():
-                                                            cost_price = float(stock['入库单价'])
-                                                            out_qty_from_batch = float(stock['累计出库数量'])
-                                                            profit = (out_price - cost_price) * out_qty_from_batch
-                                                            
-                                                            details_content += (
-                                                                f"    - 入库价: ¥{cost_price:.2f} | "
-                                                                f"出库价: ¥{out_price:.2f} | "
-                                                                f"出库数量: {out_qty_from_batch:.0f} | "
-                                                                f"毛利: ¥{profit:.2f}\n"
-                                                            )
                                                 
                                                 success_content["body"]["elements"].append({
                                                     "tag": "markdown",
