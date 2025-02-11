@@ -288,39 +288,22 @@ class MessageProcessor:
                                                 
                                                 # 检查库存是否充足
                                                 inventory_mgr = InventorySummaryManager()
-                                                stock_df = inventory_mgr.get_stock_summary(
-                                                    product_id=product_id,
-                                                    warehouse=warehouse_info['仓库名']
+                                                has_stock, current_stock = self._check_stock(
+                                                    inventory_mgr,
+                                                    product_id,
+                                                    warehouse_info['仓库名'],
+                                                    quantity
                                                 )
                                                 
-                                                # 添加调试日志
-                                                logger.info(f"Checking stock for product {product_id} in warehouse {warehouse_info['仓库名']}")
-                                                logger.info(f"Raw stock DataFrame: {stock_df}")
-                                                
-                                                # 修改库存计算逻辑
-                                                if stock_df.empty:
-                                                    current_stock = 0
-                                                    logger.warning(f"No stock record found for product {product_id} in warehouse {warehouse_info['仓库名']}")
-                                                else:
-                                                    # 确保数值类型转换
-                                                    try:
-                                                        # 先将字符串转换为数值类型
-                                                        stock_df['当前库存'] = pd.to_numeric(stock_df['当前库存'], errors='coerce')
-                                                        current_stock = stock_df['当前库存'].fillna(0).sum()
-                                                        logger.info(f"Total current stock: {current_stock}, Required quantity: {quantity}")
-                                                    except Exception as e:
-                                                        logger.error(f"Error calculating current stock: {e}")
-                                                        current_stock = 0
-                                                
-                                                if current_stock < quantity:
+                                                if not has_stock:
                                                     insufficient_stock.append({
                                                         'name': product_info['商品名称'],
+                                                        'warehouse': warehouse_info['仓库名'],  # 添加仓库名
                                                         'required': quantity,
                                                         'current': current_stock
                                                     })
                                                     logger.warning(f"Insufficient stock for {product_info['商品名称']}: "
                                                                  f"required={quantity}, available={current_stock}")
-                                                    # 不再使用continue，直接跳出循环
                                                     break
                                                 
                                                 outbound_records.append({
@@ -359,7 +342,7 @@ class MessageProcessor:
                                                         {
                                                             "tag": "markdown",
                                                             "content": "❌ **库存不足**\n\n以下商品库存不足：\n\n" + "\n".join([
-                                                                f"- **{item['name']}**\n  需求数量: {item['required']:.0f}\n  当前库存: {item['current']:.0f}"
+                                                                f"- **{item['name']}** | {item['warehouse']}\n  需求数量: {item['required']:.0f}\n  当前库存: {item['current']:.0f}"
                                                                 for item in insufficient_stock
                                                             ]),
                                                             "text_align": "left"
@@ -422,167 +405,172 @@ class MessageProcessor:
                                         # 写入出库记录
                                         outbound_mgr = OutboundManager()
                                         if outbound_mgr.add_outbound(outbound_records):
-                                            # 生成成功消息卡片
-                                            success_content = {
-                                                "schema": "2.0",
-                                                "config": {
-                                                    "update_multi": True,
-                                                    "style": {
-                                                        "text_size": {
-                                                            "normal_v2": {
-                                                                "default": "normal",
-                                                                "pc": "normal",
-                                                                "mobile": "heading"
+                                            try:
+                                                # 生成成功消息卡片
+                                                success_content = {
+                                                    "schema": "2.0",
+                                                    "config": {
+                                                        "update_multi": True,
+                                                        "style": {
+                                                            "text_size": {
+                                                                "normal_v2": {
+                                                                    "default": "normal",
+                                                                    "pc": "normal",
+                                                                    "mobile": "heading"
+                                                                }
                                                             }
                                                         }
+                                                    },
+                                                    "body": {
+                                                        "elements": [
+                                                            {
+                                                                "tag": "markdown",
+                                                                "content": f":OK: **出库单 {outbound_id} 处理成功**\n\n",
+                                                                "text_align": "left",
+                                                                "text_size": "normal_v2"
+                                                            },
+                                                            {
+                                                                "tag": "markdown",
+                                                                "content": "📦 **出库明细：**\n",
+                                                                "text_align": "left",
+                                                                "text_size": "normal_v2"
+                                                            }
+                                                        ]
                                                     }
-                                                },
-                                                "body": {
-                                                    "elements": [
-                                                        {
-                                                            "tag": "markdown",
-                                                            "content": f":OK: **出库单 {outbound_id} 处理成功**\n\n",
-                                                            "text_align": "left",
-                                                            "text_size": "normal_v2"
-                                                        },
-                                                        {
-                                                            "tag": "markdown",
-                                                            "content": "📦 **出库明细：**\n",
-                                                            "text_align": "left",
-                                                            "text_size": "normal_v2"
-                                                        }
-                                                    ]
                                                 }
-                                            }
-                                            
-                                            # 添加商品明细
-                                            total_amount = 0
-                                            total_cost = 0
-                                            details_content = ""
-                                            
-                                            # 按商品分组显示
-                                            product_groups = {}
-                                            for detail in outbound_records:
-                                                fields = detail["fields"]  # 获取 fields
-                                                product_id = fields["商品ID"]  # 从 fields 中获取商品ID
-                                                if product_id not in product_groups:
-                                                    product_groups[product_id] = []
-                                                product_groups[product_id].append(detail)
-                                            
-                                            for product_id, details in product_groups.items():
-                                                fields = details[0]["fields"]  # 获取第一条记录的 fields
-                                                product_name = fields["商品名称"]
-                                                product_spec = fields.get("商品规格", "")
-                                                warehouse_name = fields["仓库名"]
-                                                details_content += f"\n**{product_name}** ({product_spec}) | 仓库: {warehouse_name}\n"
                                                 
-                                                product_total_qty = 0
-                                                product_total_amount = 0
-                                                product_total_cost = 0
+                                                # 按商品分组显示
+                                                product_groups = {}
+                                                for record in outbound_records:
+                                                    fields = record["fields"]
+                                                    product_id = fields["商品ID"]
+                                                    if product_id not in product_groups:
+                                                        product_groups[product_id] = []
+                                                    product_groups[product_id].append(fields)
                                                 
-                                                # 按入库单价分组
-                                                cost_groups = {}
-                                                for detail in details:
-                                                    fields = detail["fields"]
-                                                    # 从库存记录中获取入库单价
-                                                    inventory_mgr = InventorySummaryManager()
-                                                    stock_df = inventory_mgr.get_stock_summary(
-                                                        product_id=fields["商品ID"],
-                                                        warehouse=fields["仓库名"]
+                                                logger.info("Product groups: %s", json.dumps(product_groups, indent=2, ensure_ascii=False))
+                                                
+                                                # 添加商品明细
+                                                total_amount = 0
+                                                details_content = ""
+                                                
+                                                # 遍历每个商品组
+                                                for product_id, records in product_groups.items():
+                                                    product_info = records[0]  # 获取第一条记录的商品信息
+                                                    warehouse_name = product_info['仓库名']
+                                                    details_content += f"\n**{product_info['商品名称']}** | {warehouse_name}\n"
+                                                    
+                                                    group_total_qty = sum(float(r['出库数量']) for r in records)
+                                                    group_total_amount = sum(float(r['出库总价']) for r in records)
+                                                    total_amount += group_total_amount
+                                                    
+                                                    details_content += (
+                                                        f"  总数量: {group_total_qty:.0f} | "
+                                                        f"总金额: ¥{group_total_amount:.2f}\n"
                                                     )
                                                     
-                                                    if not stock_df.empty:
-                                                        cost_price = float(stock_df['入库单价'].iloc[0])
-                                                    else:
-                                                        cost_price = 0
-                                                        logger.warning(f"No stock record found for product {fields['商品ID']} in warehouse {fields['仓库名']}")
+                                                    # 获取该商品的库存信息（包含入库单价）
+                                                    inventory_mgr = InventorySummaryManager()
+                                                    stock_df = inventory_mgr.get_stock_summary(
+                                                        product_id=product_id,
+                                                        warehouse=warehouse_name
+                                                    )
                                                     
-                                                    if cost_price not in cost_groups:
-                                                        cost_groups[cost_price] = []
-                                                    cost_groups[cost_price].append(fields)
-                                                
-                                                # 按入库单价分组显示出库明细
-                                                for cost_price, items in cost_groups.items():
-                                                    group_qty = 0
-                                                    group_amount = 0
-                                                    group_cost = 0
+                                                    # 按入库单价降序排序
+                                                    stock_df = stock_df.sort_values('入库单价', ascending=False)
+                                                    logger.info(f"Stock summary for {product_id}: \n{stock_df.to_string()}")
                                                     
-                                                    for item in items:
-                                                        qty = float(item["出库数量"])
-                                                        out_price = float(item["出库单价"])
-                                                        amount = qty * out_price
-                                                        cost = qty * cost_price
+                                                    # 对每条出库记录，显示从哪些入库批次中扣减
+                                                    for record in records:
+                                                        out_qty = float(record['出库数量'])
+                                                        out_price = float(record['出库单价'])
+                                                        remaining_qty = out_qty
                                                         
-                                                        group_qty += qty
-                                                        group_amount += amount
-                                                        group_cost += cost
+                                                        details_content += f"  出库明细 (单价: ¥{out_price:.2f}):\n"
                                                         
-                                                        details_content += (
-                                                            f"  - 入库价 ¥{cost_price:.2f} 出库价 ¥{out_price:.2f} 出库数量: {qty:.0f}\n"
-                                                            f"    出库总价: ¥{amount:.2f} 利润: ¥{(amount - cost):.2f}\n"
-                                                        )
-                                                    
-                                                    product_total_qty += group_qty
-                                                    product_total_amount += group_amount
-                                                    product_total_cost += group_cost
-                                                
-                                                # 添加商品小计
-                                                product_total_profit = product_total_amount - product_total_cost
-                                                details_content += (
-                                                    f"  **商品小计:** 数量: {product_total_qty:.0f} | "
-                                                    f"金额: ¥{product_total_amount:.2f} | "
-                                                    f"成本: ¥{product_total_cost:.2f} | "
-                                                    f"利润: ¥{product_total_profit:.2f}\n"
-                                                )
-                                                
-                                                total_amount += product_total_amount
-                                                total_cost += product_total_cost
-                                            
-                                            success_content["body"]["elements"].append({
-                                                "tag": "markdown",
-                                                "content": details_content,
-                                                "text_align": "left",
-                                                "text_size": "normal_v2"
-                                            })
-                                            
-                                            # 添加总计信息
-                                            total_profit = total_amount - total_cost
-                                            success_content["body"]["elements"].append({
-                                                "tag": "markdown",
-                                                "content": (
-                                                    f"\n💰 **订单总计**\n"
-                                                    f"总金额: ¥{total_amount:.2f}\n"
-                                                    f"总成本: ¥{total_cost:.2f}\n"
-                                                    f"总利润: ¥{total_profit:.2f}"
-                                                ),
-                                                "text_align": "left",
-                                                "text_size": "normal_v2"
-                                            })
-                                            
-                                            # 更新卡片
-                                            request = PatchMessageRequest.builder() \
-                                                .message_id(message_id) \
-                                                .request_body(PatchMessageRequestBody.builder()
-                                                    .content(json.dumps(success_content, ensure_ascii=False))
-                                                    .build()) \
-                                                .build()
+                                                        # 检查是否有可用库存
+                                                        total_available_stock = stock_df['当前库存'].sum()
+                                                        if total_available_stock <= 0:
+                                                            # 如果没有可用库存，显示历史记录
+                                                            details_content += "    📊 历史出库记录：\n"
+                                                            for _, stock in stock_df.iterrows():
+                                                                cost_price = float(stock['入库单价'])
+                                                                profit = (out_price - cost_price) * (stock['累计出库数量'])
+                                                                details_content += (
+                                                                    f"    - 入库价: ¥{cost_price:.2f} | "
+                                                                    f"出库价: ¥{out_price:.2f} | "
+                                                                    f"出库数量: {stock['累计出库数量']:.0f} | "
+                                                                    f"毛利: ¥{profit:.2f}\n"
+                                                                )
+                                                        else:
+                                                            # 从高价库存开始扣减
+                                                            for _, stock in stock_df.iterrows():
+                                                                if remaining_qty <= 0:
+                                                                    break
+                                                                
+                                                                available_qty = float(stock['当前库存'])
+                                                                if available_qty > 0:
+                                                                    used_qty = min(remaining_qty, available_qty)
+                                                                    cost_price = float(stock['入库单价'])
+                                                                    profit = (out_price - cost_price) * used_qty
+                                                                    
+                                                                    details_content += (
+                                                                        f"    - 数量: {used_qty:.0f} | "
+                                                                        f"入库价: ¥{cost_price:.2f} | "
+                                                                        f"出库价: ¥{out_price:.2f} | "
+                                                                        f"毛利: ¥{profit:.2f}\n"
+                                                                    )
+                                                                    
+                                                                    remaining_qty -= used_qty
 
-                                            response = self.client.im.v1.message.patch(request)
-                                            
-                                            if response.success():
-                                                logger.info("Success card updated successfully")
-                                                # 删除消息文件
-                                                try:
-                                                    os.remove(msg_file)
-                                                    self.processed_files.add(msg_file)
-                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
-                                                except Exception as e:
-                                                    logger.error(f"Error removing message file: {e}")
-                                            else:
-                                                logger.error(
-                                                    f"Failed to update success card: code={response.code}, "
-                                                    f"msg={response.msg}, log_id={response.get_log_id()}"
-                                                )
+                                                            if remaining_qty > 0:
+                                                                details_content += f"    ⚠️ 警告：还有 {remaining_qty:.0f} 个单位未能匹配到库存\n"
+                                                
+                                                success_content["body"]["elements"].append({
+                                                    "tag": "markdown",
+                                                    "content": details_content,
+                                                    "text_align": "left",
+                                                    "text_size": "normal_v2"
+                                                })
+                                                
+                                                success_content["body"]["elements"].append({
+                                                    "tag": "markdown",
+                                                    "content": f"\n💰 **订单总计：** ¥{total_amount:.2f}",
+                                                    "text_align": "left",
+                                                    "text_size": "normal_v2"
+                                                })
+
+                                                # 更新卡片
+                                                request = PatchMessageRequest.builder() \
+                                                    .message_id(message_id) \
+                                                    .request_body(PatchMessageRequestBody.builder()
+                                                        .content(json.dumps(success_content, ensure_ascii=False))
+                                                        .build()) \
+                                                    .build()
+
+                                                response = self.client.im.v1.message.patch(request)
+                                                
+                                                if response.success():
+                                                    logger.info("Success card updated successfully")
+                                                    # 删除消息文件
+                                                    try:
+                                                        os.remove(msg_file)
+                                                        self.processed_files.add(msg_file)
+                                                        logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                    except Exception as e:
+                                                        logger.error(f"Error removing message file: {e}")
+                                                else:
+                                                    logger.error(
+                                                        f"Failed to update success card: code={response.code}, "
+                                                        f"msg={response.msg}, log_id={response.get_log_id()}"
+                                                    )
+                                            except Exception as e:
+                                                logger.error(f"Error updating inventory: {str(e)}", exc_info=True)
+                                                raise
+                                            finally:
+                                                # 无论成功与否，都确保文件被标记为已处理
+                                                self.processed_files.add(msg_file)
+                                                return True
                                         else:
                                             raise Exception("出库记录写入失败")
                                         
@@ -1818,6 +1806,31 @@ class MessageProcessor:
         except Exception as e:
             logger.error(f"获取商品选项失败: {e}", exc_info=True)
             return []
+
+    def _check_stock(self, inventory_mgr, product_id: str, warehouse: str, required_qty: float) -> tuple[bool, float]:
+        """检查商品库存是否充足"""
+        try:
+            stock_df = inventory_mgr.get_stock_summary(
+                product_id=product_id,
+                warehouse=warehouse
+            )
+            
+            if stock_df.empty:
+                logger.warning(f"No stock record found for product {product_id} in warehouse {warehouse}")
+                return False, 0
+            
+            # 确保数值转换
+            stock_df['当前库存'] = pd.to_numeric(stock_df['当前库存'], errors='coerce')
+            current_stock = float(stock_df['当前库存'].fillna(0).sum())
+            
+            logger.info(f"Stock check - Product: {product_id}, Warehouse: {warehouse}, "
+                       f"Required: {required_qty}, Available: {current_stock}")
+            
+            return current_stock >= required_qty, current_stock
+            
+        except Exception as e:
+            logger.error(f"Error checking stock: {e}", exc_info=True)
+            return False, 0
 
 if __name__ == "__main__":
     processor = MessageProcessor(
