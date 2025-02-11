@@ -180,9 +180,9 @@ class InboundManager(BaseTableManager):
             inventory_mgr = InventorySummaryManager()
             config = self.bitable_config[self.TABLE_NAME]
 
-            # 为整批次生成一个入库单号
-            inbound_no = f"IN-{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            print(f"生成入库单号: {inbound_no}")
+            # 如果能从数据中解析出来入库单号 则用解析到的
+            inbound_no = data_list[0].get('fields', {}).get('入库单号', f"IN-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+            print(f"使用入库单号: {inbound_no}")
 
             for data in data_list:
                 try:

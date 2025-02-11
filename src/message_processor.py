@@ -100,29 +100,15 @@ class MessageProcessor:
                             # 处理卡片操作
                             if message.get("type") == "card_action":
                                 print("开始处理卡片操作...")  # 调试日志
-                                
                                 data = message.get("data", {})
-                                print(f"原始数据: {data}")  # 打印完整的原始数据
-                                
-                                # 解析 raw_data 获取 message_id
-                                raw_data = json.loads(data.get("raw_data", "{}"))
-                                message_id = raw_data.get("event", {}).get("context", {}).get("open_message_id")
-                                
-                                # 获取操作者ID
-                                operator_id = data.get("operator_id")
-                                
-                                # 获取操作值
                                 action_value = data.get("action_value", {})
                                 
-                                print(f"操作者ID: {operator_id}")  # 调试日志
-                                print(f"消息ID: {message_id}")  # 调试日志
-                                print(f"操作值: {action_value}")  # 调试日志
-                                
                                 if isinstance(action_value, str):
-                                    try:
-                                        action_value = json.loads(action_value)
-                                    except:
-                                        action_value = {}
+                                    action_value = json.loads(action_value)
+                                
+                                # 从 raw_data 中获取 message_id
+                                raw_data = json.loads(data.get("raw_data", "{}"))
+                                message_id = raw_data.get("event", {}).get("context", {}).get("open_message_id")
                                 
                                 if action_value.get("action") == "add_product":
                                     try:
@@ -132,44 +118,230 @@ class MessageProcessor:
                                         
                                         # 生成新的表单
                                         new_card = self.generate_inbound_form(
-                                            tracking_info={'inbound_id': inbound_id} if inbound_id else None,
+                                            inbound_id=inbound_id,
                                             product_rows=current_rows
                                         )
                                         
                                         if new_card and message_id:
-                                            # 更新卡片
+                                            # 使用 SDK 更新卡片
                                             logger.info(f"Updating card message: {message_id} with {current_rows} rows")
-                                            url = f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/patch"
                                             
-                                            # 获取访问令牌
-                                            tenant_access_token = await self.get_tenant_access_token()
-                                            
-                                            headers = {
-                                                "Authorization": f"Bearer {tenant_access_token}",
-                                                "Content-Type": "application/json; charset=utf-8",
-                                            }
-                                            
-                                            update_data = {
-                                                "content": json.dumps(new_card)
-                                            }
-                                            
-                                            async with aiohttp.ClientSession() as session:
-                                                async with session.patch(url, headers=headers, json=update_data) as response:
-                                                    result = await response.json()
-                                                    if result.get("code") == 0:
-                                                        logger.info("Card updated successfully")
-                                                    else:
-                                                        logger.error(f"Failed to update card: {result}")
+                                            # 构造请求对象
+                                            request = PatchMessageRequest.builder() \
+                                                .message_id(message_id) \
+                                                .request_body(PatchMessageRequestBody.builder()
+                                                    .content(json.dumps(new_card, ensure_ascii=False))
+                                                    .build()) \
+                                                .build()
+
+                                            # 发起请求
+                                            response = self.client.im.v1.message.patch(request)
+
+                                            # 检查响应
+                                            if response.success():
+                                                logger.info("Card updated successfully")
+                                                # 删除消息文件
+                                                try:
+                                                    os.remove(msg_file)
+                                                    self.processed_files.add(msg_file)
+                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
+                                            else:
+                                                logger.error(
+                                                    f"Failed to update card: code={response.code}, "
+                                                    f"msg={response.msg}, log_id={response.get_log_id()}"
+                                                )
                                         else:
                                             logger.error(f"Invalid card update parameters: message_id={message_id}, rows={current_rows}")
                                             
                                     except Exception as e:
                                         logger.error(f"处理添加商品操作失败: {e}", exc_info=True)
+                                        operator_id = data.get("operator_id")
                                         if operator_id:
                                             await self.send_text_message(
                                                 receive_id=operator_id,
                                                 content=f"❌ 添加商品失败: {str(e)}\n请重试或联系管理员"
                                             )
+                                elif action_value.get("action") == "submit" and action_value.get("form_type") == "inbound":
+                                    try:
+                                        # 收集所有商品数据
+                                        form_data = data.get("form_data", {})
+                                        inbound_id = action_value.get("inbound_id")
+                                        operator_id = data.get("operator_id")
+                                        current_time = int(datetime.now().timestamp() * 1000)
+                                        
+                                        inbound_records = []
+                                        i = 0
+                                        while True:
+                                            product_key = f"product_{i}"
+                                            quantity_key = f"quantity_{i}"
+                                            price_key = f"price_{i}"
+                                            
+                                            if product_key not in form_data:
+                                                break
+                                                
+                                            product_id = form_data.get(product_key)
+                                            quantity = float(form_data.get(quantity_key, 0))
+                                            price = float(form_data.get(price_key, 0))
+                                            
+                                            if product_id and quantity > 0 and price > 0:
+                                                # 获取商品详情
+                                                product_df = self.product_mgr.get_data()
+                                                product_info = product_df[product_df['商品ID'] == product_id].to_dict('records')
+                                                
+                                                if not product_info:
+                                                    raise ValueError(f"商品ID无效: {product_id}")
+                                                
+                                                product_info = product_info[0]
+                                                
+                                                # 获取仓库信息
+                                                warehouse_df = self.warehouse_mgr.get_data()
+                                                warehouse_info = warehouse_df[warehouse_df['仓库名'] == form_data['warehouse']].to_dict('records')
+                                                
+                                                if not warehouse_info:
+                                                    raise ValueError(f"仓库名无效: {form_data['warehouse']}")
+                                                
+                                                warehouse_info = warehouse_info[0]
+                                                
+                                                inbound_records.append({
+                                                    "fields": {
+                                                        "入库单号": inbound_id,
+                                                        "入库日期": int(datetime.strptime(form_data['inbound_date'], "%Y-%m-%d %z").timestamp() * 1000),
+                                                        "供应商": form_data.get('supplier', ''),
+                                                        "仓库名": warehouse_info['仓库名'],
+                                                        "仓库备注": warehouse_info.get('仓库备注', ''),
+                                                        "仓库地址": warehouse_info.get('仓库地址', ''),
+                                                        "商品ID": product_id,
+                                                        "商品名称": product_info['商品名称'],
+                                                        "商品规格": product_info.get('商品规格', ''),
+                                                        "入库数量": quantity,
+                                                        "入库单价": price,
+                                                        "入库总价": quantity * price,
+                                                        "操作者ID": [{"id": operator_id}],
+                                                        "操作时间": current_time,
+                                                        "快递单号": form_data.get('tracking', ''),
+                                                        "快递手机号": form_data.get('phone', '')
+                                                    }
+                                                })
+                                            i += 1
+                                        
+                                        if not inbound_records:
+                                            raise ValueError("没有有效的入库记录")
+                                        
+                                        # 写入入库记录
+                                        inbound_mgr = InboundManager()
+                                        if inbound_mgr.add_inbound(inbound_records):
+                                            # 更新库存
+                                            inventory_mgr = InventorySummaryManager()
+                                            for record in inbound_records:
+                                                fields = record["fields"]
+                                                inventory_data = {
+                                                    "商品ID": fields["商品ID"],
+                                                    "商品名称": fields["商品名称"],
+                                                    "仓库名": fields["仓库名"],
+                                                    "入库数量": fields["入库数量"],
+                                                    "入库单价": fields["入库单价"]
+                                                }
+                                                inventory_mgr.update_inbound(inventory_data)
+                                            
+                                            # 生成成功消息卡片 (schema 2.0格式)
+                                            success_content = {
+                                                "schema": "2.0",
+                                                "config": {
+                                                    "update_multi": True,
+                                                    "style": {
+                                                        "text_size": {
+                                                            "normal_v2": {
+                                                                "default": "normal",
+                                                                "pc": "normal",
+                                                                "mobile": "heading"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "body": {
+                                                    "direction": "vertical",
+                                                    "padding": "12px 12px 12px 12px",
+                                                    "elements": [
+                                                        {
+                                                            "tag": "markdown",
+                                                            "content": f":OK: **入库单 {inbound_id} 处理成功**\n\n",
+                                                            "text_align": "left",
+                                                            "text_size": "normal_v2"
+                                                        },
+                                                        {
+                                                            "tag": "markdown",
+                                                            "content": "📦 **入库明细：**\n",
+                                                            "text_align": "left",
+                                                            "text_size": "normal_v2"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                            
+                                            # 添加商品明细
+                                            total_amount = 0
+                                            details_content = ""
+                                            for record in inbound_records:
+                                                fields = record["fields"]
+                                                total_amount += fields['入库总价']
+                                                details_content += (
+                                                    f"- {fields['商品名称']} ({fields['商品规格']})\n"
+                                                    f"  数量: {fields['入库数量']:.0f} | "
+                                                    f"单价: ¥{fields['入库单价']:.2f} | "
+                                                    f"小计: ¥{fields['入库总价']:.2f}\n"
+                                                )
+                                            
+                                            success_content["body"]["elements"].append({
+                                                "tag": "markdown",
+                                                "content": details_content,
+                                                "text_align": "left",
+                                                "text_size": "normal_v2"
+                                            })
+                                            
+                                            success_content["body"]["elements"].append({
+                                                "tag": "markdown",
+                                                "content": f"\n💰 **总金额：** ¥{total_amount:.2f}",
+                                                "text_align": "left",
+                                                "text_size": "normal_v2"
+                                            })
+                                            
+                                            # 更新卡片
+                                            request = PatchMessageRequest.builder() \
+                                                .message_id(message_id) \
+                                                .request_body(PatchMessageRequestBody.builder()
+                                                    .content(json.dumps(success_content, ensure_ascii=False))
+                                                    .build()) \
+                                                .build()
+
+                                            response = self.client.im.v1.message.patch(request)
+                                            
+                                            if response.success():
+                                                logger.info("Success card updated successfully")
+                                                # 删除消息文件
+                                                try:
+                                                    os.remove(msg_file)
+                                                    self.processed_files.add(msg_file)
+                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
+                                            else:
+                                                logger.error(
+                                                    f"Failed to update success card: code={response.code}, "
+                                                    f"msg={response.msg}, log_id={response.get_log_id()}"
+                                                )
+                                        else:
+                                            raise Exception("入库记录写入失败")
+                                        
+                                    except Exception as e:
+                                        error_msg = f"❌ 入库失败: {str(e)}\n请重试或联系管理员"
+                                        logger.error(f"Error processing inbound form: {str(e)}", exc_info=True)
+                                        await self.send_text_message(
+                                            receive_id=data.get('operator_id'),
+                                            content=error_msg
+                                        )
+                                continue
                             elif message.get("type") in ["p2p_message", "message"]:  # 添加 "message" 类型支持群消息
                                 event_data = json.loads(message["data"])
                                 event = event_data["event"]
@@ -267,266 +439,320 @@ class MessageProcessor:
         message = '\n'.join(line for line in message.splitlines() if line.strip())
         return message.strip()
 
-    def generate_inbound_form(self, tracking_info=None, product_rows=1) -> dict:
-        """生成入库表单卡片"""
+    def generate_inbound_form(self, inbound_id = None, product_rows=1) -> dict:
         try:
-            # 获取商品列表
-            product_df = self.product_mgr.get_data()
-            logger.debug(f"Product DataFrame columns: {product_df.columns.tolist()}")
-            logger.debug(f"First product row: {product_df.iloc[0].to_dict()}")
+            # 获取当前日期
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            if inbound_id is None:
+                inbound_id = f"IN-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            # 获取仓库和商品选项
+            warehouse_options = self.get_warehouse_options()
+            product_options = self.get_product_options()
             
-            product_options = []
-            for _, row in product_df.iterrows():
-                product_options.append({
-                    "text": {
-                        "tag": "plain_text",
-                        "content": f"{row['商品名称']} {row['商品规格']}"
-                    },
-                    "value": json.dumps({
-                        "product_id": row['商品ID'],
-                        "product_name": row['商品名称'],
-                        "product_spec": row['商品规格']
-                    }, ensure_ascii=False)
-                })
-
-            # 获取仓库列表
-            warehouse_df = self.warehouse_mgr.get_data()
-            warehouse_options = []
-            for _, row in warehouse_df.iterrows():
-                warehouse_options.append({
-                    "text": {
-                        "tag": "plain_text",
-                        "content": f"{row['仓库名']} - {row['仓库备注']}"
-                    },
-                    "value": json.dumps({
-                        "warehouse": row['仓库名'],
-                        "warehouse_note": row['仓库备注'],
-                        "warehouse_address": row['仓库地址']
-                    }, ensure_ascii=False)
-                })
-
             # 构建卡片
             card = {
                 "schema": "2.0",
                 "config": {
-                    "update_multi": True
-                },
-                "header": {
-                    "title": {
-                        "tag": "plain_text",
-                        "content": "入库表单"
-                    },
-                    "template": "blue"
+                    "update_multi": True,
+                    "style": {
+                        "text_size": {
+                            "normal_v2": {
+                                "default": "normal",
+                                "pc": "normal",
+                                "mobile": "heading"
+                            }
+                        }
+                    }
                 },
                 "body": {
+                    "direction": "vertical",
+                    "padding": "12px 12px 12px 12px",
                     "elements": [
                         {
                             "tag": "div",
                             "text": {
                                 "tag": "plain_text",
-                                "content": "入库信息"
-                            }
-                        },
-                        {
-                            "tag": "column_set",
-                            "columns": [
-                                {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
-                                        {
-                                            "tag": "date_picker",
-                                            "placeholder": {
-                                                "tag": "plain_text",
-                                                "content": "请选择入库日期"
-                                            },
-                                            "value": {
-                                                "key": "date"
-                                            }
-                                        }
-                                    ]
-                                },
-                                {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
-                                        {
-                                            "tag": "select_static",
-                                            "placeholder": {
-                                                "tag": "plain_text",
-                                                "content": "仓库"
-                                            },
-                                            "options": warehouse_options,
-                                            "value": {
-                                                "key": "warehouse"
-                                            }
-                                        }
-                                    ]
-                                }
-                            ]
-                        },
-                        {
-                            "tag": "hr"
-                        },
-                        {
-                            "tag": "div",
-                            "text": {
-                                "tag": "plain_text",
-                                "content": "供应商信息"
-                            }
-                        },
-                        {
-                            "tag": "input",
-                            "placeholder": {
-                                "tag": "plain_text",
-                                "content": "供应商"
+                                "content": "",
+                                "text_size": "normal_v2",
+                                "text_align": "left",
+                                "text_color": "default"
                             },
-                            "value": {
-                                "key": "supplier"
-                            }
+                            "margin": "0px 0px 0px 0px"
                         },
                         {
-                            "tag": "hr"
-                        },
-                        {
-                            "tag": "div",
-                            "text": {
-                                "tag": "plain_text",
-                                "content": "商品信息"
-                            }
-                        },
-                        {
-                            "tag": "div",
-                            "fields": [
+                            "tag": "form",
+                            "elements": [
                                 {
-                                    "is_short": True,
+                                    "tag": "div",
                                     "text": {
-                                        "tag": "lark_md",
-                                        "content": "**商品名称**"
-                                    }
+                                        "tag": "plain_text",
+                                        "content": "入库信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
                                 },
                                 {
-                                    "is_short": True,
+                                    "tag": "column_set",
+                                    "horizontal_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "columns": [
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "date_picker",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请选择入库日期"
+                                                    },
+                                                    "width": "default",
+                                                    "initial_date": current_date,
+                                                    "name": "inbound_date",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "select_static",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请选择仓库"
+                                                    },
+                                                    "options": warehouse_options,
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "name": "warehouse",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        }
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "div",
                                     "text": {
-                                        "tag": "lark_md",
-                                        "content": "**数量**"
-                                    }
+                                        "tag": "plain_text",
+                                        "content": "供应商信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
                                 },
                                 {
-                                    "is_short": True,
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入"
+                                    },
+                                    "default_value": "",
+                                    "width": "default",
+                                    "name": "supplier",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "div",
                                     "text": {
-                                        "tag": "lark_md",
-                                        "content": "**单价**"
-                                    }
+                                        "tag": "plain_text",
+                                        "content": "商品信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
                                 }
-                            ]
-                        }
-                    ] + [
-                        {
-                            "tag": "column_set",
-                            "columns": [
+                            ] + [
                                 {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
+                                    "tag": "column_set",
+                                    "horizontal_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "columns": [
                                         {
-                                            "tag": "select_static",
-                                            "placeholder": {
-                                                "tag": "plain_text",
-                                                "content": "请选择商品"
-                                            },
-                                            "options": product_options,
-                                            "value": {
-                                                "key": f"product_{i}"
-                                            }
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "select_static",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请选择商品名"
+                                                    },
+                                                    "options": product_options,
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "name": f"product_{i}",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "input",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请输入数量"
+                                                    },
+                                                    "default_value": "",
+                                                    "width": "default",
+                                                    "name": f"quantity_{i}",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "input",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请输入单价"
+                                                    },
+                                                    "default_value": "",
+                                                    "width": "default",
+                                                    "name": f"price_{i}",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
                                         }
-                                    ]
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
+                                } for i in range(product_rows)
+                            ] + [
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
                                 },
                                 {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
+                                    "tag": "column_set",
+                                    "horizontal_align": "left",
+                                    "columns": [
                                         {
-                                            "tag": "input",
-                                            "placeholder": {
-                                                "tag": "plain_text",
-                                                "content": "请输入数量"
-                                            },
-                                            "value": {
-                                                "key": f"quantity_{i}"
-                                            }
-                                        }
-                                    ]
-                                },
-                                {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "button",
+                                                    "text": {
+                                                        "tag": "plain_text",
+                                                        "content": "完成入库"
+                                                    },
+                                                    "type": "primary",
+                                                    "width": "default",
+                                                    "behaviors": [
+                                                        {
+                                                            "type": "callback",
+                                                            "value": {
+                                                                "action": "submit",
+                                                                "inbound_id": inbound_id,
+                                                                "form_type": "inbound"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "form_action_type": "submit",
+                                                    "name": "submit"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
                                         {
-                                            "tag": "input",
-                                            "placeholder": {
-                                                "tag": "plain_text",
-                                                "content": "请输入单价"
-                                            },
-                                            "value": {
-                                                "key": f"price_{i}"
-                                            }
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "button",
+                                                    "text": {
+                                                        "tag": "plain_text",
+                                                        "content": "添加商品"
+                                                    },
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "form_action_type": "submit",
+                                                    "size": "medium",
+                                                    "behaviors": [
+                                                        {
+                                                            "type": "callback",
+                                                            "value": {
+                                                                "action": "add_product",
+                                                                "inbound_id": inbound_id,
+                                                                "rows": product_rows + 1
+                                                            }
+                                                        }
+                                                    ],
+                                                    "name": "add_product",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
                                         }
-                                    ]
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
                                 }
-                            ]
-                        } for i in range(product_rows)
-                    ] + [
-                        {
-                            "tag": "column_set",
-                            "columns": [
-                                {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
-                                        {
-                                            "tag": "button",
-                                            "text": {
-                                                "tag": "plain_text",
-                                                "content": "完成入库"
-                                            },
-                                            "type": "primary",
-                                            "value": {
-                                                "action": "complete_inbound",
-                                                "inbound_id": tracking_info.get('inbound_id') if tracking_info else None
-                                            }
-                                        }
-                                    ]
-                                },
-                                {
-                                    "tag": "column",
-                                    "width": "weighted",
-                                    "weight": 1,
-                                    "elements": [
-                                        {
-                                            "tag": "button",
-                                            "text": {
-                                                "tag": "plain_text",
-                                                "content": "添加商品"
-                                            },
-                                            "type": "default",
-                                            "value": {
-                                                "action": "add_product",
-                                                "rows": product_rows + 1,
-                                                "inbound_id": tracking_info.get('inbound_id') if tracking_info else None
-                                            }
-                                        }
-                                    ]
-                                }
-                            ]
+                            ],
+                            "direction": "vertical",
+                            "padding": "4px 0px 4px 0px",
+                            "margin": "0px 0px 0px 0px",
+                            "name": "inbound_form"
                         }
                     ]
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": f"入库表单: {inbound_id}"
+                    },
+                    "subtitle": {
+                        "tag": "plain_text",
+                        "content": ""
+                    },
+                    "template": "blue",
+                    "padding": "12px 12px 12px 12px"
                 }
             }
             
@@ -586,93 +812,6 @@ class MessageProcessor:
                     receive_id=operator_id,
                     content="❌ 操作失败，请稍后重试"
                 )
-
-    async def handle_card_action(self, form_data: dict) -> None:
-        """处理卡片操作事件（异步方法）"""
-        try:
-            # 获取操作者信息
-            operator_id = form_data.get('operator_id')
-            raw_data = form_data.get('raw_data', {})
-            action = raw_data.get('event', {}).get('action', {})
-            
-            # 打印调试信息
-            logger.info(f"Received card action: {json.dumps(action, ensure_ascii=False)}")
-            
-            # 检查是否是按钮点击事件
-            if action.get('tag') == 'button':
-                # 获取按钮的值
-                value = action.get('value', {})
-                logger.info(f"Button value: {json.dumps(value, ensure_ascii=False)}")
-                
-                # 获取表单数据
-                form_data = raw_data.get('event', {}).get('action', {}).get('form_data', {})
-                logger.info(f"Form data: {json.dumps(form_data, ensure_ascii=False)}")
-                
-                # 检查表单类型
-                if value.get('form_type') == 'inbound':
-                    # 构造完整的表单值
-                    form_values = {
-                        'form_data': form_data,
-                        'batch_complete': value.get('batch_complete', True),
-                        'message_id': raw_data.get('event', {}).get('message_id')  # 添加消息ID
-                    }
-                    
-                    # 处理入库表单
-                    await self._handle_inbound_form(operator_id, form_values)
-                elif value.get('form_type') == 'outbound':
-                    # 处理出库表单
-                    await self._handle_outbound_form(operator_id, form_values)
-                
-        except Exception as e:
-            logger.error(f"处理卡片操作失败: {e}", exc_info=True)
-            if operator_id:
-                await self.send_text_message(
-                    receive_id=operator_id,
-                    content=f"❌ 处理表单失败: {str(e)}\n请重试或联系管理员"
-                )
-
-    async def _handle_inbound_form(self, operator_id: str, form_values: dict) -> None:
-        """处理入库表单数据（异步方法）"""
-        try:
-            # 获取消息ID
-            raw_data = json.loads(form_values.get('raw_data', '{}'))
-            message_id = raw_data.get('event', {}).get('context', {}).get('open_message_id')
-            
-            action_value = raw_data.get('event', {}).get('action', {}).get('value', {})
-            action = action_value.get('action', '')
-            
-            if action == 'add_product':
-                # 获取当前行数
-                current_rows = action_value.get('rows', 1)
-                inbound_id = action_value.get('inbound_id')
-                
-                # 生成新的表单，增加一行商品
-                new_card = self.generate_inbound_form(
-                    tracking_info={'inbound_id': inbound_id} if inbound_id else None,
-                    product_rows=current_rows
-                )
-                
-                if new_card and message_id:
-                    # 更新当前卡片
-                    logger.info(f"Updating card message: {message_id} with {current_rows} rows")
-                    success = await self.update_card_message(message_id, new_card)
-                    if not success:
-                        logger.error("Failed to update card message")
-                else:
-                    logger.error(f"Invalid card update parameters: message_id={message_id}, rows={current_rows}")
-                    
-            elif action == 'complete_inbound':
-                # 处理表单提交
-                # ... 其他代码保持不变 ...
-                pass
-                
-        except Exception as e:
-            logger.error(f"处理入库表单失败: {str(e)}", exc_info=True)
-            await self.send_text_message(
-                receive_id=operator_id,
-                content=f"❌ 入库提交失败: {str(e)}\n请重试或联系管理员"
-            )
-
     def generate_disabled_inbound_form(self, warehouse_data: dict, product_data: dict, 
                                      quantity: float, price: float, supplier: str, 
                                      tracking: str, phone: str, inbound_id: str) -> dict:
@@ -895,111 +1034,6 @@ class MessageProcessor:
             logger.error("Error sending interactive message: %s", str(e), exc_info=True)
             return False
 
-    async def update_card_message(self, message_id: str, card: dict) -> bool:
-        """更新卡片消息
-        Args:
-            message_id: 消息ID
-            card: 新的卡片内容
-        Returns:
-            bool: 是否更新成功
-        """
-        try:
-            # 调用飞书 API 更新卡片
-            url = f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/patch"
-            headers = {
-                "Authorization": f"Bearer {self.tenant_access_token}",
-                "Content-Type": "application/json; charset=utf-8",
-            }
-            
-            data = {
-                "content": json.dumps(card)
-            }
-            
-            async with aiohttp.ClientSession() as session:
-                async with session.patch(url, headers=headers, json=data) as response:
-                    result = await response.json()
-                    if result.get("code") == 0:
-                        logger.info(f"Successfully updated card message: {message_id}")
-                        return True
-                    else:
-                        logger.error(f"Failed to update card message: {result}")
-                        return False
-                        
-        except Exception as e:
-            logger.error(f"Error updating card message: {e}")
-            return False
-
-    def _process_card_action(self, message_data: Dict[str, Any]) -> bool:
-        """处理卡片操作消息"""
-        try:
-            print("\n开始处理卡片操作...")  # 调试日志
-            print(f"接收到的消息数据: {json.dumps(message_data, ensure_ascii=False, indent=2)}")  # 调试日志
-            
-            data = message_data['data']
-            form_data = data['form_data']
-            operator_id = data['operator_id']
-            current_time = int(datetime.now().timestamp())  # 秒级时间戳，不是毫秒
-            
-            print("解析表单数据...")  # 调试日志
-            # 解析表单数据
-            product = json.loads(form_data['product'])
-            warehouse = json.loads(form_data['warehouse'])
-            quantity = float(form_data['quantity'])
-            price = float(form_data['price'])
-            supplier = form_data.get('supplier', '')
-            tracking = form_data.get('tracking', '')
-            phone = form_data.get('phone', '')
-            
-            print(f"解析后的数据:\n产品: {product}\n仓库: {warehouse}\n数量: {quantity}\n价格: {price}")  # 调试日志
-            
-            # 构造入库数据
-            inbound_data = [{
-                "fields": {
-                    "入库日期": current_time,  # 秒级时间戳
-                    "快递单号": tracking,
-                    "快递手机号": phone,
-                    "供应商": supplier,
-                    "商品ID": product.get("product_id"),
-                    "商品名称": product.get("product_name"),
-                    "入库数量": float(quantity),  # 确保是数字类型
-                    "入库单价": float(price),    # 确保是数字类型
-                    "入库总价": float(quantity) * float(price),  # 添加入库总价
-                    "仓库名": warehouse.get("warehouse"),
-                    "仓库备注": warehouse.get("warehouse_note"),
-                    "仓库地址": warehouse.get("warehouse_address"),
-                    "操作者ID": [{"id": operator_id}],
-                    "操作时间": current_time  # 秒级时间戳
-                }
-            }]
-
-            print(f"构造的入库数据: {json.dumps(inbound_data, ensure_ascii=False, indent=2)}")  # 调试日志
-
-            # 使用入库管理器处理入库
-            print("开始写入入库表...")  # 调试日志
-            inbound_mgr = InboundManager()
-            if inbound_mgr.add_inbound(inbound_data):
-                print("入库数据写入成功")  # 调试日志
-                # 发送确认消息
-                confirmation_message = (
-                    f"入库信息已收集完整，我已记录。\n"
-                    f"入库商品明细:\n"
-                    f"1. {product['product_name']} {product.get('product_spec', '')} "
-                    f"-- 数量: {quantity} 单价: {price}  {warehouse['warehouse']}\n"
-                    f"✔数据已成功写入入库表。"
-                )
-                
-                self._send_message(operator_id, confirmation_message)
-                return True
-            else:
-                print("入库数据写入失败")  # 调试日志
-                raise Exception("入库处理失败")
-            
-        except Exception as e:
-            print(f"处理卡片操作时出错: {str(e)}")  # 调试日志
-            # 发送错误消息给用户
-            if 'operator_id' in locals():
-                self._send_message(operator_id, f"❌ 处理入库信息时出错: {str(e)}\n请联系管理员。")
-            return False
 
     async def get_tenant_access_token(self) -> str:
         """获取租户访问令牌"""
@@ -1025,6 +1059,42 @@ class MessageProcessor:
         except Exception as e:
             logger.error(f"Error getting tenant access token: {e}")
             return None
+
+    def get_warehouse_options(self) -> list:
+        """获取仓库选项列表"""
+        try:
+            warehouse_df = self.warehouse_mgr.get_data()
+            options = []
+            for _, row in warehouse_df.iterrows():
+                options.append({
+                    "text": {
+                        "tag": "plain_text",
+                        "content": f"{row['仓库名']} - {row['仓库备注']}"
+                    },
+                    "value": row['仓库名']
+                })
+            return options
+        except Exception as e:
+            logger.error(f"获取仓库选项失败: {e}", exc_info=True)
+            return []
+
+    def get_product_options(self) -> list:
+        """获取商品选项列表"""
+        try:
+            product_df = self.product_mgr.get_data()
+            options = []
+            for _, row in product_df.iterrows():
+                options.append({
+                    "text": {
+                        "tag": "plain_text",
+                        "content": f"{row['商品名称']} {row['商品规格']}"
+                    },
+                    "value": row['商品ID']
+                })
+            return options
+        except Exception as e:
+            logger.error(f"获取商品选项失败: {e}", exc_info=True)
+            return []
 
 if __name__ == "__main__":
     processor = MessageProcessor(
