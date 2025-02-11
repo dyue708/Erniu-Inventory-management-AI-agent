@@ -293,7 +293,7 @@ class OutboundManager(BaseTableManager):
             config = self.bitable_config[self.TABLE_NAME]
             successful_records = []
 
-            outbound_no = f"OUT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            outbound_no = data_list[0].get('fields', {}).get('出库单号', f"OUT-{datetime.now().strftime('%Y%m%d%H%M%S')}")
             print(f"生成出库单号: {outbound_no}")
 
             # 首先检查所有商品的库存是否足够
@@ -358,7 +358,7 @@ class OutboundManager(BaseTableManager):
                         new_record = [{
                             "fields": {
                                 "出库单号": outbound_no,
-                                "出库日期": fields.get('出入库日期', ''),
+                                "出库日期": fields.get('出库日期', fields.get('出入库日期', '')),
                                 "快递单号": fields.get('快递单号', ''),
                                 "快递手机号": fields.get('快递手机号', ''),
                                 "客户": fields.get('客户', ''),
@@ -603,8 +603,8 @@ class InventorySummaryManager(BaseTableManager):
             print(f"更新入库库存汇总失败: {str(e)}")
             return False
 
-    def update_outbound(self, outbound_data: dict) -> bool:
-        """处理出库记录，更新库存汇总（优先出库价格高的商品）"""
+    def update_outbound(self, outbound_data: dict) -> list:
+        """处理出库记录，更新库存汇总，返回实际出库明细"""
         try:
             config = self.bitable_config[self.TABLE_NAME]
             
@@ -642,20 +642,31 @@ class InventorySummaryManager(BaseTableManager):
             remaining_qty = float(outbound_data['出库数量'])  # 修改这里：使用出库数量
             current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
 
+            outbound_details = []
+            
             # 从高价库存开始出库
             for record in matching_records:
                 if remaining_qty <= 0:
                     break
-
+                
                 current_stock = float(record["fields"].get("当前库存", 0))
                 outbound_qty = min(remaining_qty, current_stock)
-                outbound_price = float(outbound_data['出库单价'])  # 修改这里：使用出库单价
-                total_price = outbound_qty * outbound_price
-
+                outbound_price = float(outbound_data['出库单价'])
+                
+                # 记录实际出库明细
+                outbound_details.append({
+                    "商品ID": outbound_data['商品ID'],
+                    "商品名称": outbound_data['商品名称'],
+                    "商品规格": record["fields"].get("商品规格", ""),
+                    "出库数量": outbound_qty,
+                    "出库单价": outbound_price,
+                    "入库单价": float(record["fields"].get("入库单价", 0))
+                })
+                
                 # 更新记录
                 new_outbound_qty = float(record["fields"].get("累计出库数量", 0)) + outbound_qty
                 new_current_qty = current_stock - outbound_qty
-                new_outbound_total = float(record["fields"].get("出库总价", 0)) + total_price
+                new_outbound_total = float(record["fields"].get("出库总价", 0)) + outbound_qty * outbound_price
 
                 update_fields = {
                     "累计出库数量": new_outbound_qty,
@@ -673,15 +684,15 @@ class InventorySummaryManager(BaseTableManager):
                 )
 
                 remaining_qty -= outbound_qty
-
+            
             if remaining_qty > 0:
                 raise Exception("库存不足")
-
-            return True
-
+            
+            return outbound_details
+            
         except Exception as e:
             print(f"更新出库库存汇总失败: {e}")
-            return False
+            return []
 
     def get_stock_summary(self, product_id: str = None, warehouse: str = None) -> pd.DataFrame:
         """获取库存汇总信息，按商品ID和仓库名汇总"""

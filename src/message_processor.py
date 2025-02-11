@@ -9,13 +9,20 @@ from deepseek_chat import DeepSeekChat
 import asyncio
 import re
 from datetime import datetime
-from table_manage import WarehouseManager, ProductManager, InboundManager, InventorySummaryManager
+from table_manage import (
+    WarehouseManager, 
+    ProductManager, 
+    InboundManager, 
+    OutboundManager,
+    InventorySummaryManager
+)
 from asyncio import Lock
 from collections import defaultdict
 from lark_oapi.api.im.v1 import *
 from typing import Optional, Dict, Any
 import traceback
 import aiohttp
+import pandas as pd
 
 # 设置日志
 logging.basicConfig(
@@ -96,9 +103,10 @@ class MessageProcessor:
                             with open(msg_file, 'r', encoding='utf-8') as f:
                                 message = json.load(f)
                             
-                            # 解析飞书消息格式
-                            # 处理卡片操作
-                            if message.get("type") == "card_action":
+                            # 处理不同类型的消息
+                            message_type = message.get("type")
+                            
+                            if message_type == "card_action":
                                 print("开始处理卡片操作...")  # 调试日志
                                 data = message.get("data", {})
                                 action_value = data.get("action_value", {})
@@ -110,7 +118,7 @@ class MessageProcessor:
                                 raw_data = json.loads(data.get("raw_data", "{}"))
                                 message_id = raw_data.get("event", {}).get("context", {}).get("open_message_id")
                                 
-                                if action_value.get("action") == "add_product":
+                                if action_value.get("action") == "add_product" and action_value.get("form_type") == "inbound":
                                     try:
                                         # 获取当前行数
                                         current_rows = action_value.get("rows", 1)
@@ -163,6 +171,428 @@ class MessageProcessor:
                                                 receive_id=operator_id,
                                                 content=f"❌ 添加商品失败: {str(e)}\n请重试或联系管理员"
                                             )
+                                elif action_value.get("action") == "add_product" and action_value.get("form_type") == "outbound":
+                                    try:
+                                        # 详细记录接收到的数据
+                                        logger.info(f"Received outbound add_product action with data: {json.dumps(action_value, indent=2)}")
+                                        
+                                        # 获取当前行数
+                                        current_rows = action_value.get("rows", 1)
+                                        outbound_id = action_value.get("outbound_id")
+                                        
+                                        if not outbound_id:
+                                            raise ValueError("Missing outbound_id in action_value")
+                                            
+                                        logger.info(f"Generating outbound form with {current_rows} rows for outbound_id: {outbound_id}")
+                                        
+                                        # 生成新的表单
+                                        new_card = self.generate_outbound_form(
+                                            outbound_id=outbound_id,
+                                            product_rows=current_rows
+                                        )
+                                        
+                                        if not new_card:
+                                            raise ValueError("Failed to generate outbound form card")
+                                            
+                                        if not message_id:
+                                            raise ValueError("Missing message_id")
+                                            
+                                        logger.info(f"Updating card message {message_id} with new form")
+                                        
+                                        # 构造请求对象
+                                        request = PatchMessageRequest.builder() \
+                                            .message_id(message_id) \
+                                            .request_body(PatchMessageRequestBody.builder()
+                                                .content(json.dumps(new_card, ensure_ascii=False))
+                                                .build()) \
+                                            .build()
+
+                                        # 发起请求
+                                        logger.info("Sending patch request to Feishu API")
+                                        response = self.client.im.v1.message.patch(request)
+
+                                        # 检查响应
+                                        if response.success():
+                                            logger.info("Card updated successfully")
+                                            # 删除消息文件
+                                            try:
+                                                os.remove(msg_file)
+                                                self.processed_files.add(msg_file)
+                                                logger.info(f"Successfully processed and removed file: {msg_file}")
+                                            except Exception as e:
+                                                logger.error(f"Error removing message file: {e}", exc_info=True)
+                                                # 继续执行，因为卡片更新已经成功
+                                        else:
+                                            error_msg = (
+                                                f"Failed to update card: code={response.code}, "
+                                                f"msg={response.msg}, log_id={response.get_log_id()}"
+                                            )
+                                            logger.error(error_msg)
+                                            raise Exception(error_msg)
+                                            
+                                    except Exception as e:
+                                        error_msg = f"处理添加商品操作失败: {str(e)}"
+                                        logger.error(error_msg, exc_info=True)
+                                        operator_id = data.get("operator_id")
+                                        if operator_id:
+                                            try:
+                                                await self.send_text_message(
+                                                    receive_id=operator_id,
+                                                    content=f"❌ {error_msg}\n请重试或联系管理员"
+                                                )
+                                                logger.info(f"Error message sent to operator {operator_id}")
+                                            except Exception as send_error:
+                                                logger.error(f"Failed to send error message: {send_error}", exc_info=True)
+                                elif action_value.get("action") == "submit" and action_value.get("form_type") == "outbound":
+                                    try:
+                                        # 收集所有商品数据
+                                        form_data = data.get("form_data", {})
+                                        outbound_id = action_value.get("outbound_id")
+                                        operator_id = data.get("operator_id")
+                                        current_time = int(datetime.now().timestamp() * 1000)
+                                        
+                                        outbound_records = []
+                                        insufficient_stock = []
+                                        i = 0
+                                        
+                                        while True:
+                                            product_key = f"product_{i}"
+                                            quantity_key = f"quantity_{i}"
+                                            price_key = f"price_{i}"
+                                            
+                                            if product_key not in form_data:
+                                                break
+                                                
+                                            product_id = form_data.get(product_key)
+                                            quantity = float(form_data.get(quantity_key, 0))
+                                            price = float(form_data.get(price_key, 0))
+                                            
+                                            if product_id and quantity > 0 and price > 0:
+                                                # 获取商品详情
+                                                product_df = self.product_mgr.get_data()
+                                                product_info = product_df[product_df['商品ID'] == product_id].to_dict('records')
+                                                
+                                                if not product_info:
+                                                    raise ValueError(f"商品ID无效: {product_id}")
+                                                
+                                                product_info = product_info[0]
+                                                
+                                                # 获取仓库信息
+                                                warehouse_df = self.warehouse_mgr.get_data()
+                                                warehouse_info = warehouse_df[warehouse_df['仓库名'] == form_data['warehouse']].to_dict('records')
+                                                
+                                                if not warehouse_info:
+                                                    raise ValueError(f"仓库名无效: {form_data['warehouse']}")
+                                                
+                                                warehouse_info = warehouse_info[0]
+                                                
+                                                # 检查库存是否充足
+                                                inventory_mgr = InventorySummaryManager()
+                                                stock_df = inventory_mgr.get_stock_summary(
+                                                    product_id=product_id,
+                                                    warehouse=warehouse_info['仓库名']
+                                                )
+                                                
+                                                # 添加调试日志
+                                                logger.info(f"Checking stock for product {product_id} in warehouse {warehouse_info['仓库名']}")
+                                                logger.info(f"Raw stock DataFrame: {stock_df}")
+                                                
+                                                # 修改库存计算逻辑
+                                                if stock_df.empty:
+                                                    current_stock = 0
+                                                    logger.warning(f"No stock record found for product {product_id} in warehouse {warehouse_info['仓库名']}")
+                                                else:
+                                                    # 确保数值类型转换
+                                                    try:
+                                                        # 先将字符串转换为数值类型
+                                                        stock_df['当前库存'] = pd.to_numeric(stock_df['当前库存'], errors='coerce')
+                                                        current_stock = stock_df['当前库存'].fillna(0).sum()
+                                                        logger.info(f"Total current stock: {current_stock}, Required quantity: {quantity}")
+                                                    except Exception as e:
+                                                        logger.error(f"Error calculating current stock: {e}")
+                                                        current_stock = 0
+                                                
+                                                if current_stock < quantity:
+                                                    insufficient_stock.append({
+                                                        'name': product_info['商品名称'],
+                                                        'required': quantity,
+                                                        'current': current_stock
+                                                    })
+                                                    logger.warning(f"Insufficient stock for {product_info['商品名称']}: "
+                                                                 f"required={quantity}, available={current_stock}")
+                                                    # 不再使用continue，直接跳出循环
+                                                    break
+                                                
+                                                outbound_records.append({
+                                                    "fields": {
+                                                        "出库单号": outbound_id,
+                                                        "出库日期": int(datetime.strptime(form_data['outbound_date'], "%Y-%m-%d %z").timestamp() * 1000),
+                                                        "客户": form_data.get('customer', ''),
+                                                        "仓库名": warehouse_info['仓库名'],
+                                                        "仓库备注": warehouse_info.get('仓库备注', ''),
+                                                        "仓库地址": warehouse_info.get('仓库地址', ''),
+                                                        "商品ID": product_id,
+                                                        "商品名称": product_info['商品名称'],
+                                                        "商品规格": product_info.get('商品规格', ''),
+                                                        "出库数量": quantity,
+                                                        "出库单价": price,
+                                                        "出库总价": quantity * price,
+                                                        "操作者ID": [{"id": operator_id}],
+                                                        "操作时间": current_time,
+                                                        "快递单号": form_data.get('tracking', ''),
+                                                        "快递手机号": form_data.get('phone', '')
+                                                    }
+                                                })
+                                            i += 1
+                                        
+                                        if insufficient_stock:
+                                            logger.info("Found insufficient stock, preparing error card...")
+                                            # 生成库存不足提示卡片
+                                            error_content = {
+                                                "schema": "2.0",
+                                                "config": {
+                                                    "update_multi": True,
+                                                    "wide_screen_mode": True
+                                                },
+                                                "body": {
+                                                    "elements": [
+                                                        {
+                                                            "tag": "markdown",
+                                                            "content": "❌ **库存不足**\n\n以下商品库存不足：\n\n" + "\n".join([
+                                                                f"- **{item['name']}**\n  需求数量: {item['required']:.0f}\n  当前库存: {item['current']:.0f}"
+                                                                for item in insufficient_stock
+                                                            ]),
+                                                            "text_align": "left"
+                                                        }
+                                                    ]
+                                                },
+                                                "header": {
+                                                    "template": "red",
+                                                    "title": {
+                                                        "content": "库存不足提示",
+                                                        "tag": "plain_text"
+                                                    }
+                                                }
+                                            }
+                                            
+                                            logger.info(f"Updating message {message_id} with error card...")
+                                            logger.info(f"Error content: {json.dumps(error_content, ensure_ascii=False)}")
+                                            
+                                            # 更新卡片
+                                            try:
+                                                # 构造请求对象
+                                                request = PatchMessageRequest.builder() \
+                                                    .message_id(message_id) \
+                                                    .request_body(PatchMessageRequestBody.builder()
+                                                        .content(json.dumps(error_content, ensure_ascii=False))
+                                                        .build()) \
+                                                    .build()
+                                                
+                                                # 发送请求
+                                                logger.info("Sending patch request to update card...")
+                                                response = self.client.im.v1.message.patch(request)
+                                                
+                                                # 检查响应
+                                                if response.success():
+                                                    logger.info("Successfully updated card with insufficient stock message")
+                                                    # 删除消息文件并标记为已处理
+                                                    try:
+                                                        os.remove(msg_file)
+                                                        self.processed_files.add(msg_file)
+                                                        logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                    except Exception as e:
+                                                        logger.error(f"Error removing message file: {e}")
+                                                else:
+                                                    logger.error(
+                                                        f"Failed to update error card: code={response.code}, "
+                                                        f"msg={response.msg}, log_id={response.get_log_id()}"
+                                                    )
+                                            except Exception as e:
+                                                logger.error(f"Error updating card with insufficient stock message: {e}", exc_info=True)
+                                            finally:
+                                                # 无论成功与否，都确保文件被标记为已处理
+                                                self.processed_files.add(msg_file)
+                                                # 确保在库存不足时立即返回
+                                                return True
+                                            
+                                        # 如果没有库存不足的情况，继续处理
+                                        if not outbound_records:
+                                            raise ValueError("没有有效的出库记录")
+                                        
+                                        # 写入出库记录
+                                        outbound_mgr = OutboundManager()
+                                        if outbound_mgr.add_outbound(outbound_records):
+                                            # 生成成功消息卡片
+                                            success_content = {
+                                                "schema": "2.0",
+                                                "config": {
+                                                    "update_multi": True,
+                                                    "style": {
+                                                        "text_size": {
+                                                            "normal_v2": {
+                                                                "default": "normal",
+                                                                "pc": "normal",
+                                                                "mobile": "heading"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "body": {
+                                                    "elements": [
+                                                        {
+                                                            "tag": "markdown",
+                                                            "content": f":OK: **出库单 {outbound_id} 处理成功**\n\n",
+                                                            "text_align": "left",
+                                                            "text_size": "normal_v2"
+                                                        },
+                                                        {
+                                                            "tag": "markdown",
+                                                            "content": "📦 **出库明细：**\n",
+                                                            "text_align": "left",
+                                                            "text_size": "normal_v2"
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                            
+                                            # 添加商品明细
+                                            total_amount = 0
+                                            total_cost = 0
+                                            details_content = ""
+                                            
+                                            # 按商品分组显示
+                                            product_groups = {}
+                                            for detail in outbound_records:
+                                                fields = detail["fields"]  # 获取 fields
+                                                product_id = fields["商品ID"]  # 从 fields 中获取商品ID
+                                                if product_id not in product_groups:
+                                                    product_groups[product_id] = []
+                                                product_groups[product_id].append(detail)
+                                            
+                                            for product_id, details in product_groups.items():
+                                                fields = details[0]["fields"]  # 获取第一条记录的 fields
+                                                product_name = fields["商品名称"]
+                                                product_spec = fields.get("商品规格", "")
+                                                warehouse_name = fields["仓库名"]
+                                                details_content += f"\n**{product_name}** ({product_spec}) | 仓库: {warehouse_name}\n"
+                                                
+                                                product_total_qty = 0
+                                                product_total_amount = 0
+                                                product_total_cost = 0
+                                                
+                                                # 按入库单价分组
+                                                cost_groups = {}
+                                                for detail in details:
+                                                    fields = detail["fields"]
+                                                    # 从库存记录中获取入库单价
+                                                    inventory_mgr = InventorySummaryManager()
+                                                    stock_df = inventory_mgr.get_stock_summary(
+                                                        product_id=fields["商品ID"],
+                                                        warehouse=fields["仓库名"]
+                                                    )
+                                                    
+                                                    if not stock_df.empty:
+                                                        cost_price = float(stock_df['入库单价'].iloc[0])
+                                                    else:
+                                                        cost_price = 0
+                                                        logger.warning(f"No stock record found for product {fields['商品ID']} in warehouse {fields['仓库名']}")
+                                                    
+                                                    if cost_price not in cost_groups:
+                                                        cost_groups[cost_price] = []
+                                                    cost_groups[cost_price].append(fields)
+                                                
+                                                # 按入库单价分组显示出库明细
+                                                for cost_price, items in cost_groups.items():
+                                                    group_qty = 0
+                                                    group_amount = 0
+                                                    group_cost = 0
+                                                    
+                                                    for item in items:
+                                                        qty = float(item["出库数量"])
+                                                        out_price = float(item["出库单价"])
+                                                        amount = qty * out_price
+                                                        cost = qty * cost_price
+                                                        
+                                                        group_qty += qty
+                                                        group_amount += amount
+                                                        group_cost += cost
+                                                        
+                                                        details_content += (
+                                                            f"  - 入库价 ¥{cost_price:.2f} 出库价 ¥{out_price:.2f} 出库数量: {qty:.0f}\n"
+                                                            f"    出库总价: ¥{amount:.2f} 利润: ¥{(amount - cost):.2f}\n"
+                                                        )
+                                                    
+                                                    product_total_qty += group_qty
+                                                    product_total_amount += group_amount
+                                                    product_total_cost += group_cost
+                                                
+                                                # 添加商品小计
+                                                product_total_profit = product_total_amount - product_total_cost
+                                                details_content += (
+                                                    f"  **商品小计:** 数量: {product_total_qty:.0f} | "
+                                                    f"金额: ¥{product_total_amount:.2f} | "
+                                                    f"成本: ¥{product_total_cost:.2f} | "
+                                                    f"利润: ¥{product_total_profit:.2f}\n"
+                                                )
+                                                
+                                                total_amount += product_total_amount
+                                                total_cost += product_total_cost
+                                            
+                                            success_content["body"]["elements"].append({
+                                                "tag": "markdown",
+                                                "content": details_content,
+                                                "text_align": "left",
+                                                "text_size": "normal_v2"
+                                            })
+                                            
+                                            # 添加总计信息
+                                            total_profit = total_amount - total_cost
+                                            success_content["body"]["elements"].append({
+                                                "tag": "markdown",
+                                                "content": (
+                                                    f"\n💰 **订单总计**\n"
+                                                    f"总金额: ¥{total_amount:.2f}\n"
+                                                    f"总成本: ¥{total_cost:.2f}\n"
+                                                    f"总利润: ¥{total_profit:.2f}"
+                                                ),
+                                                "text_align": "left",
+                                                "text_size": "normal_v2"
+                                            })
+                                            
+                                            # 更新卡片
+                                            request = PatchMessageRequest.builder() \
+                                                .message_id(message_id) \
+                                                .request_body(PatchMessageRequestBody.builder()
+                                                    .content(json.dumps(success_content, ensure_ascii=False))
+                                                    .build()) \
+                                                .build()
+
+                                            response = self.client.im.v1.message.patch(request)
+                                            
+                                            if response.success():
+                                                logger.info("Success card updated successfully")
+                                                # 删除消息文件
+                                                try:
+                                                    os.remove(msg_file)
+                                                    self.processed_files.add(msg_file)
+                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
+                                            else:
+                                                logger.error(
+                                                    f"Failed to update success card: code={response.code}, "
+                                                    f"msg={response.msg}, log_id={response.get_log_id()}"
+                                                )
+                                        else:
+                                            raise Exception("出库记录写入失败")
+                                        
+                                    except Exception as e:
+                                        error_msg = f"❌ 出库失败: {str(e)}\n请重试或联系管理员"
+                                        logger.error(f"Error processing outbound form: {str(e)}", exc_info=True)
+                                        await self.send_text_message(
+                                            receive_id=data.get('operator_id'),
+                                            content=error_msg
+                                        )
                                 elif action_value.get("action") == "submit" and action_value.get("form_type") == "inbound":
                                     try:
                                         # 收集所有商品数据
@@ -173,6 +603,7 @@ class MessageProcessor:
                                         
                                         inbound_records = []
                                         i = 0
+                                        
                                         while True:
                                             product_key = f"product_{i}"
                                             quantity_key = f"quantity_{i}"
@@ -219,9 +650,7 @@ class MessageProcessor:
                                                         "入库单价": price,
                                                         "入库总价": quantity * price,
                                                         "操作者ID": [{"id": operator_id}],
-                                                        "操作时间": current_time,
-                                                        "快递单号": form_data.get('tracking', ''),
-                                                        "快递手机号": form_data.get('phone', '')
+                                                        "操作时间": current_time
                                                     }
                                                 })
                                             i += 1
@@ -232,107 +661,100 @@ class MessageProcessor:
                                         # 写入入库记录
                                         inbound_mgr = InboundManager()
                                         if inbound_mgr.add_inbound(inbound_records):
-                                            # 更新库存
-                                            inventory_mgr = InventorySummaryManager()
-                                            for record in inbound_records:
-                                                fields = record["fields"]
-                                                inventory_data = {
-                                                    "商品ID": fields["商品ID"],
-                                                    "商品名称": fields["商品名称"],
-                                                    "仓库名": fields["仓库名"],
-                                                    "入库数量": fields["入库数量"],
-                                                    "入库单价": fields["入库单价"]
-                                                }
-                                                inventory_mgr.update_inbound(inventory_data)
-                                            
-                                            # 生成成功消息卡片 (schema 2.0格式)
-                                            success_content = {
-                                                "schema": "2.0",
-                                                "config": {
-                                                    "update_multi": True,
-                                                    "style": {
-                                                        "text_size": {
-                                                            "normal_v2": {
-                                                                "default": "normal",
-                                                                "pc": "normal",
-                                                                "mobile": "heading"
+                                            try:
+                                                # 生成成功消息卡片
+                                                success_content = {
+                                                    "schema": "2.0",
+                                                    "config": {
+                                                        "update_multi": True,
+                                                        "style": {
+                                                            "text_size": {
+                                                                "normal_v2": {
+                                                                    "default": "normal",
+                                                                    "pc": "normal",
+                                                                    "mobile": "heading"
+                                                                }
                                                             }
                                                         }
+                                                    },
+                                                    "body": {
+                                                        "elements": [
+                                                            {
+                                                                "tag": "markdown",
+                                                                "content": f":OK: **入库单 {inbound_id} 处理成功**\n\n",
+                                                                "text_align": "left",
+                                                                "text_size": "normal_v2"
+                                                            },
+                                                            {
+                                                                "tag": "markdown",
+                                                                "content": "📦 **入库明细：**\n",
+                                                                "text_align": "left",
+                                                                "text_size": "normal_v2"
+                                                            }
+                                                        ]
                                                     }
-                                                },
-                                                "body": {
-                                                    "direction": "vertical",
-                                                    "padding": "12px 12px 12px 12px",
-                                                    "elements": [
-                                                        {
-                                                            "tag": "markdown",
-                                                            "content": f":OK: **入库单 {inbound_id} 处理成功**\n\n",
-                                                            "text_align": "left",
-                                                            "text_size": "normal_v2"
-                                                        },
-                                                        {
-                                                            "tag": "markdown",
-                                                            "content": "📦 **入库明细：**\n",
-                                                            "text_align": "left",
-                                                            "text_size": "normal_v2"
-                                                        }
-                                                    ]
                                                 }
-                                            }
-                                            
-                                            # 添加商品明细
-                                            total_amount = 0
-                                            details_content = ""
-                                            for record in inbound_records:
-                                                fields = record["fields"]
-                                                total_amount += fields['入库总价']
-                                                details_content += (
-                                                    f"- {fields['商品名称']} ({fields['商品规格']})\n"
-                                                    f"  数量: {fields['入库数量']:.0f} | "
-                                                    f"单价: ¥{fields['入库单价']:.2f} | "
-                                                    f"小计: ¥{fields['入库总价']:.2f}\n"
-                                                )
-                                            
-                                            success_content["body"]["elements"].append({
-                                                "tag": "markdown",
-                                                "content": details_content,
-                                                "text_align": "left",
-                                                "text_size": "normal_v2"
-                                            })
-                                            
-                                            success_content["body"]["elements"].append({
-                                                "tag": "markdown",
-                                                "content": f"\n💰 **总金额：** ¥{total_amount:.2f}",
-                                                "text_align": "left",
-                                                "text_size": "normal_v2"
-                                            })
-                                            
-                                            # 更新卡片
-                                            request = PatchMessageRequest.builder() \
-                                                .message_id(message_id) \
-                                                .request_body(PatchMessageRequestBody.builder()
-                                                    .content(json.dumps(success_content, ensure_ascii=False))
-                                                    .build()) \
-                                                .build()
+                                                
+                                                # 添加商品明细
+                                                total_amount = 0
+                                                details_content = ""
+                                                for record in inbound_records:
+                                                    fields = record["fields"]
+                                                    total_amount += fields['入库总价']
+                                                    details_content += (
+                                                        f"- {fields['商品名称']} ({fields['商品规格']}) | {fields['仓库名']}\n"
+                                                        f"  数量: {fields['入库数量']:.0f} | "
+                                                        f"单价: ¥{fields['入库单价']:.2f} | "
+                                                        f"小计: ¥{fields['入库总价']:.2f}\n"
+                                                    )
+                                                
+                                                success_content["body"]["elements"].append({
+                                                    "tag": "markdown",
+                                                    "content": details_content,
+                                                    "text_align": "left",
+                                                    "text_size": "normal_v2"
+                                                })
+                                                
+                                                success_content["body"]["elements"].append({
+                                                    "tag": "markdown",
+                                                    "content": f"\n💰 **总金额：** ¥{total_amount:.2f}",
+                                                    "text_align": "left",
+                                                    "text_size": "normal_v2"
+                                                })
+                                                
+                                                # 更新卡片
+                                                request = PatchMessageRequest.builder() \
+                                                    .message_id(message_id) \
+                                                    .request_body(PatchMessageRequestBody.builder()
+                                                        .content(json.dumps(success_content, ensure_ascii=False))
+                                                        .build()) \
+                                                    .build()
 
-                                            response = self.client.im.v1.message.patch(request)
-                                            
-                                            if response.success():
-                                                logger.info("Success card updated successfully")
-                                                # 删除消息文件
-                                                try:
-                                                    os.remove(msg_file)
-                                                    self.processed_files.add(msg_file)
-                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
-                                                except Exception as e:
-                                                    logger.error(f"Error removing message file: {e}")
-                                            else:
-                                                logger.error(
-                                                    f"Failed to update success card: code={response.code}, "
-                                                    f"msg={response.msg}, log_id={response.get_log_id()}"
-                                                )
+                                                response = self.client.im.v1.message.patch(request)
+                                                
+                                                if response.success():
+                                                    logger.info("Success card updated successfully")
+                                                    # 删除消息文件并标记为已处理
+                                                    try:
+                                                        os.remove(msg_file)
+                                                        self.processed_files.add(msg_file)
+                                                        logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                    except Exception as e:
+                                                        logger.error(f"Error removing message file: {e}")
+                                                else:
+                                                    logger.error(
+                                                        f"Failed to update success card: code={response.code}, "
+                                                        f"msg={response.msg}, log_id={response.get_log_id()}"
+                                                    )
+                                            except Exception as e:
+                                                logger.error(f"Error updating inventory: {str(e)}", exc_info=True)
+                                                raise
+                                            finally:
+                                                # 无论成功与否，都确保文件被标记为已处理
+                                                self.processed_files.add(msg_file)
+                                                return True
                                         else:
-                                            raise Exception("入库记录写入失败")
+                                            raise ValueError("入库记录写入失败")
                                         
                                     except Exception as e:
                                         error_msg = f"❌ 入库失败: {str(e)}\n请重试或联系管理员"
@@ -341,82 +763,126 @@ class MessageProcessor:
                                             receive_id=data.get('operator_id'),
                                             content=error_msg
                                         )
-                                continue
-                            elif message.get("type") in ["p2p_message", "message"]:  # 添加 "message" 类型支持群消息
-                                event_data = json.loads(message["data"])
-                                event = event_data["event"]
-                                message_type = event["message"]["chat_type"]
-                                
-                                # 获取发送者 ID 和消息内容
-                                sender_open_id = event["sender"]["sender_id"]["open_id"]
-                                message_content = json.loads(event["message"]["content"])
-                                original_text = message_content.get("text", "")
-                                
-                                # 确定接收者 ID 和类型
-                                if message_type == "group":
-                                    receive_id = event["message"]["chat_id"]
-                                    chat_type = "group"
-                                else:
-                                    receive_id = sender_open_id
-                                    chat_type = "p2p"
-                                
-                                logger.info("Received %s message from %s: %s", 
-                                          chat_type, sender_open_id, original_text)
-                                
-                                # 使用用户锁确保顺序处理
-                                async with self.user_locks[sender_open_id]:
-                                    # Get AI response
-                                    ai_response = await self.deepseek.chat(original_text, sender_open_id)
+                                        # 确保在发生错误时也标记文件为已处理
+                                        self.processed_files.add(msg_file)
+                                        return True
+                            elif message_type in ["p2p_message", "message"]:
+                                try:
+                                    event_data = json.loads(message["data"])
+                                    event = event_data["event"]
+                                    message_type = event["message"]["chat_type"]
                                     
-                                    # 提取用户可读的消息（去除JSON部分）
-                                    user_message = self._extract_user_message(ai_response)
+                                    # 获取发送者 ID 和消息内容
+                                    sender_open_id = event["sender"]["sender_id"]["open_id"]
+                                    message_content = json.loads(event["message"]["content"])
+                                    original_text = message_content.get("text", "")
                                     
-                                    # For group chats, mention the sender
-                                    if chat_type == "group":
-                                        user_message = f"<at user_id=\"{sender_open_id}\"></at>\n{user_message}"
-                                    
-                                    # Send AI response back
-                                    success = await self.send_message(receive_id, user_message, chat_type)
-                                    if success:
-                                        logger.info("AI reply sent successfully")
+                                    # 确定接收者 ID 和类型
+                                    if message_type == "group":
+                                        receive_id = event["message"]["chat_id"]
+                                        chat_type = "group"
                                     else:
-                                        logger.error("Failed to send AI reply")
-                                        continue  # 如果发送失败，跳过文件删除
-                            
-                            elif message.get("type") == "bot_menu_event":
-                                event_data = json.loads(message["data"])
-                                event = event_data["event"]
-                                if event.get("event_key") == "INBOUND":
+                                        receive_id = sender_open_id
+                                        chat_type = "p2p"
+                                    
+                                    logger.info("Received %s message from %s: %s", 
+                                                chat_type, sender_open_id, original_text)
+                                    
+                                    # 使用用户锁确保顺序处理
+                                    async with self.user_locks[sender_open_id]:
+                                        # Get AI response
+                                        ai_response = await self.deepseek.chat(original_text, sender_open_id)
+                                        
+                                        # 提取用户可读的消息（去除JSON部分）
+                                        user_message = self._extract_user_message(ai_response)
+                                        
+                                        # For group chats, mention the sender
+                                        if chat_type == "group":
+                                            user_message = f"<at user_id=\"{sender_open_id}\"></at>\n{user_message}"
+                                        
+                                        # Send AI response back
+                                        success = await self.send_message(receive_id, user_message, chat_type)
+                                        if success:
+                                            logger.info("AI reply sent successfully")
+                                            # 删除消息文件
+                                            try:
+                                                os.remove(msg_file)
+                                                self.processed_files.add(msg_file)
+                                                logger.info(f"Successfully processed and removed file: {msg_file}")
+                                            except Exception as e:
+                                                logger.error(f"Error removing message file: {e}")
+                                        else:
+                                            logger.error("Failed to send AI reply")
+                                            continue  # 如果发送失败，跳过文件删除
+                                    
+                                except Exception as e:
+                                    logger.error(f"Error processing message: {e}")
+                                    continue
+                            elif message_type == "bot_menu_event":
+                                try:
+                                    event_data = json.loads(message["data"])
+                                    event = event_data["event"]
                                     receive_id = event["operator"]["operator_id"]["open_id"]
                                     
-                                    # 生成入库表单卡片
-                                    card = self.generate_inbound_form()
-                                    if card:
-                                        # 发送卡片消息
-                                        if await self.send_card_message(
-                                            receive_id=receive_id,
-                                            card_content=card
-                                        ):
-                                            logger.info("Inbound form card sent successfully")
+                                    if event.get("event_key") == "INBOUND":
+                                        # 生成入库表单卡片
+                                        card = self.generate_inbound_form()
+                                        if card:
+                                            # 发送卡片消息
+                                            if await self.send_card_message(
+                                                receive_id=receive_id,
+                                                card_content=card
+                                            ):
+                                                logger.info("Inbound form card sent successfully")
+                                                # 处理成功后删除消息文件
+                                                try:
+                                                    os.remove(msg_file)
+                                                    self.processed_files.add(msg_file)
+                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
+                                            else:
+                                                logger.error("Failed to send inbound form card")
+                                                continue  # 如果发送失败，跳过文件删除
                                         else:
-                                            logger.error("Failed to send inbound form card")
-                                            continue  # 如果发送失败，跳过文件删除
-                                    else:
-                                        # 发送错误消息
-                                        if await self.send_text_message(
-                                            receive_id=receive_id,
-                                            content="❌ 生成入库表单失败，请稍后重试"
-                                        ):
-                                            logger.info("Error message sent successfully")
+                                            # 发送错误消息
+                                            await self.send_text_message(
+                                                receive_id=receive_id,
+                                                content="❌ 生成入库表单失败，请稍后重试"
+                                            )
+                                            continue
+                                            
+                                    elif event.get("event_key") == "OUTBOUND":
+                                        # 生成出库表单卡片
+                                        card = self.generate_outbound_form()
+                                        if card:
+                                            # 发送卡片消息
+                                            if await self.send_card_message(
+                                                receive_id=receive_id,
+                                                card_content=card
+                                            ):
+                                                logger.info("Outbound form card sent successfully")
+                                                # 处理成功后删除消息文件
+                                                try:
+                                                    os.remove(msg_file)
+                                                    self.processed_files.add(msg_file)
+                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
+                                            else:
+                                                logger.error("Failed to send outbound form card")
+                                                continue  # 如果发送失败，跳过文件删除
                                         else:
-                                            logger.error("Failed to send error message")
-                                            continue  # 如果发送失败，跳过文件删除
-                            
-                            # 只有在消息处理成功后才删除文件
-                            os.remove(msg_file)
-                            self.processed_files.add(msg_file)
-                            logger.info("Successfully processed and removed file: %s", 
-                                      msg_file)
+                                            # 发送错误消息
+                                            await self.send_text_message(
+                                                receive_id=receive_id,
+                                                content="❌ 生成出库表单失败，请稍后重试"
+                                            )
+                                            continue
+                                            
+                                except Exception as e:
+                                    logger.error(f"Error processing bot menu event: {e}", exc_info=True)
+                                    continue
                             
                         except Exception as e:
                             logger.error("Error processing file %s: %s", msg_file, str(e))
@@ -718,7 +1184,8 @@ class MessageProcessor:
                                                             "value": {
                                                                 "action": "add_product",
                                                                 "inbound_id": inbound_id,
-                                                                "rows": product_rows + 1
+                                                                "rows": product_rows + 1 ,
+                                                                "form_type": "inbound"
                                                             }
                                                         }
                                                     ],
@@ -762,111 +1229,367 @@ class MessageProcessor:
             logger.error(f"生成入库表单失败: {e}", exc_info=True)
             return None
 
-    async def handle_bot_menu_event(self, event_data: dict) -> None:
-        """处理机器人菜单事件（异步方法）"""
+    def generate_outbound_form(self, outbound_id = None, product_rows=1) -> dict:
+        """生成出库表单卡片"""
         try:
-            # 获取事件信息
-            event_key = event_data.get('event', {}).get('event_key', '')
-            operator = event_data.get('event', {}).get('operator', {})
-            operator_id = operator.get('operator_id', {}).get('open_id')
-
-            if not operator_id:
-                logger.error("无法获取操作者ID")
-                return
-
-            # 根据菜单key处理不同的操作
-            if event_key == 'inbound':
-                # 生成入库表单卡片
-                card = self.generate_inbound_form()
-                if card:
-                    # 发送卡片消息
-                    if await self.send_card_message(
-                        receive_id=operator_id,
-                        card_content=card
-                    ):
-                        logger.info("Inbound form card sent successfully")
-                    else:
-                        logger.error("Failed to send inbound form card")
-                        return
-                else:
-                    # 发送错误消息
-                    if await self.send_text_message(
-                        receive_id=operator_id,
-                        content="❌ 生成入库表单失败，请稍后重试"
-                    ):
-                        logger.info("Error message sent successfully")
-                    else:
-                        logger.error("Failed to send error message")
-                        return
+            # 获取当前日期
+            current_date = datetime.now().strftime('%Y-%m-%d')
+            if outbound_id is None:
+                outbound_id = f"OUT-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            # 获取仓库和商品选项
+            warehouse_options = self.get_warehouse_options()
+            product_options = self.get_product_options()
             
-            elif event_key == 'outbound':
-                # TODO: 处理出库操作
-                pass
-            
-            # ... 其他菜单项的处理 ...
-
-        except Exception as e:
-            logger.error(f"处理菜单事件失败: {e}")
-            if operator_id:
-                await self.send_text_message(
-                    receive_id=operator_id,
-                    content="❌ 操作失败，请稍后重试"
-                )
-    def generate_disabled_inbound_form(self, warehouse_data: dict, product_data: dict, 
-                                     quantity: float, price: float, supplier: str, 
-                                     tracking: str, phone: str, inbound_id: str) -> dict:
-        """生成已禁用的入库表单卡片"""
-        try:
-            total_price = quantity * price
+            # 构建卡片
             card = {
                 "schema": "2.0",
-                "header": {
-                    "title": {
-                        "tag": "plain_text",
-                        "content": "入库表单 (已提交)"
-                    },
-                    "template": "grey",
+                "config": {
+                    "update_multi": True,
+                    "style": {
+                        "text_size": {
+                            "normal_v2": {
+                                "default": "normal",
+                                "pc": "normal",
+                                "mobile": "heading"
+                            }
+                        }
+                    }
                 },
                 "body": {
                     "direction": "vertical",
+                    "padding": "12px 12px 12px 12px",
                     "elements": [
                         {
                             "tag": "div",
                             "text": {
-                                "tag": "lark_md",
-                                "content": (
-                                    f"**📦 入库信息**\n\n"
-                                    f"**入库单号：**{inbound_id}\n"
-                                    f"**商品：**{product_data.get('product_name')} ({product_data.get('product_spec', '')})\n"
-                                    f"**数量：**{quantity}\n"
-                                    f"**单价：**¥{price:.2f}\n"
-                                    f"**总价：**¥{total_price:.2f}\n"
-                                    f"**仓库：**{warehouse_data.get('warehouse')} - {warehouse_data.get('warehouse_note')}\n"
-                                    f"**供应商：**{supplier}\n"
-                                    f"**快递单号：**{tracking}\n"
-                                    f"**快递手机：**{phone}\n\n"
-                                    f"_✅ 此入库信息已成功提交_"
-                                )
-                            }
+                                "tag": "plain_text",
+                                "content": "",
+                                "text_size": "normal_v2",
+                                "text_align": "left",
+                                "text_color": "default"
+                            },
+                            "margin": "0px 0px 0px 0px"
+                        },
+                        {
+                            "tag": "form",
+                            "elements": [
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "出库信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "column_set",
+                                    "horizontal_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "columns": [
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "date_picker",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请选择出库日期"
+                                                    },
+                                                    "width": "default",
+                                                    "initial_date": current_date,
+                                                    "name": "outbound_date",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "select_static",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请选择仓库"
+                                                    },
+                                                    "options": warehouse_options,
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "name": "warehouse",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        }
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "客户信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入客户名称"
+                                    },
+                                    "default_value": "",
+                                    "width": "default",
+                                    "name": "customer",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "商品信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ] + [
+                                {
+                                    "tag": "column_set",
+                                    "horizontal_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "columns": [
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "select_static",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请选择商品名"
+                                                    },
+                                                    "options": product_options,
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "name": f"product_{i}",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "input",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请输入数量"
+                                                    },
+                                                    "default_value": "",
+                                                    "width": "default",
+                                                    "name": f"quantity_{i}",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "input",
+                                                    "placeholder": {
+                                                        "tag": "plain_text",
+                                                        "content": "请输入单价"
+                                                    },
+                                                    "default_value": "",
+                                                    "width": "default",
+                                                    "name": f"price_{i}",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        }
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
+                                } for i in range(product_rows)
+                            ] + [
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "物流信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入快递单号"
+                                    },
+                                    "default_value": "",
+                                    "width": "default",
+                                    "name": "tracking",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入收件人手机号"
+                                    },
+                                    "default_value": "",
+                                    "width": "default",
+                                    "name": "phone",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "column_set",
+                                    "horizontal_align": "left",
+                                    "columns": [
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "button",
+                                                    "text": {
+                                                        "tag": "plain_text",
+                                                        "content": "完成出库"
+                                                    },
+                                                    "type": "primary",
+                                                    "width": "default",
+                                                    "behaviors": [
+                                                        {
+                                                            "type": "callback",
+                                                            "value": {
+                                                                "action": "submit",
+                                                                "outbound_id": outbound_id,
+                                                                "form_type": "outbound"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "form_action_type": "submit",
+                                                    "name": "submit"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        },
+                                        {
+                                            "tag": "column",
+                                            "width": "weighted",
+                                            "elements": [
+                                                {
+                                                    "tag": "button",
+                                                    "text": {
+                                                        "tag": "plain_text",
+                                                        "content": "添加商品"
+                                                    },
+                                                    "type": "default",
+                                                    "width": "default",
+                                                    "form_action_type": "submit",
+                                                    "size": "medium",
+                                                    "behaviors": [
+                                                        {
+                                                            "type": "callback",
+                                                            "value": {
+                                                                "action": "add_product",
+                                                                "outbound_id": outbound_id,
+                                                                "rows": product_rows + 1,
+                                                                "form_type": "outbound"
+                                                            }
+                                                        }
+                                                    ],
+                                                    "name": "add_product",
+                                                    "margin": "0px 0px 0px 0px"
+                                                }
+                                            ],
+                                            "vertical_spacing": "8px",
+                                            "horizontal_align": "left",
+                                            "vertical_align": "top",
+                                            "weight": 1
+                                        }
+                                    ],
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "direction": "vertical",
+                            "padding": "4px 0px 4px 0px",
+                            "margin": "0px 0px 0px 0px",
+                            "name": "outbound_form"
                         }
                     ]
+                },
+                "header": {
+                    "title": {
+                        "tag": "plain_text",
+                        "content": f"出库表单: {outbound_id}"
+                    },
+                    "subtitle": {
+                        "tag": "plain_text",
+                        "content": ""
+                    },
+                    "template": "red",
+                    "padding": "12px 12px 12px 12px"
                 }
             }
             
             return card
             
         except Exception as e:
-            logger.error(f"生成已禁用入库表单失败: {e}")
+            logger.error(f"生成出库表单失败: {e}", exc_info=True)
             return None
-
-    async def _handle_outbound_form(self, operator_id: str, form_values: dict) -> None:
-        """处理出库表单数据（异步方法）"""
-        try:
-            # TODO: 处理出库逻辑
-            logger.info(f"收到出库表单数据: {form_values}")
-            
-        except Exception as e:
-            logger.error(f"处理出库表单失败: {e}")
 
     async def send_card_message(self, receive_id: str, card_content: dict) -> bool:
         """发送卡片消息（异步方法）"""
