@@ -476,55 +476,26 @@ class MessageProcessor:
                                                         warehouse=warehouse_name
                                                     )
                                                     
-                                                    # 按入库单价降序排序
-                                                    stock_df = stock_df.sort_values('入库单价', ascending=False)
-                                                    logger.info(f"Stock summary for {product_id}: \n{stock_df.to_string()}")
-                                                    
                                                     # 对每条出库记录，显示从哪些入库批次中扣减
                                                     for record in records:
                                                         out_qty = float(record['出库数量'])
                                                         out_price = float(record['出库单价'])
-                                                        remaining_qty = out_qty
                                                         
                                                         details_content += f"  出库明细 (单价: ¥{out_price:.2f}):\n"
+                                                        details_content += "    📊 出库记录：\n"
                                                         
-                                                        # 检查是否有可用库存
-                                                        total_available_stock = stock_df['当前库存'].sum()
-                                                        if total_available_stock <= 0:
-                                                            # 如果没有可用库存，显示历史记录
-                                                            details_content += "    📊 历史出库记录：\n"
-                                                            for _, stock in stock_df.iterrows():
-                                                                cost_price = float(stock['入库单价'])
-                                                                profit = (out_price - cost_price) * (stock['累计出库数量'])
-                                                                details_content += (
-                                                                    f"    - 入库价: ¥{cost_price:.2f} | "
-                                                                    f"出库价: ¥{out_price:.2f} | "
-                                                                    f"出库数量: {stock['累计出库数量']:.0f} | "
-                                                                    f"毛利: ¥{profit:.2f}\n"
-                                                                )
-                                                        else:
-                                                            # 从高价库存开始扣减
-                                                            for _, stock in stock_df.iterrows():
-                                                                if remaining_qty <= 0:
-                                                                    break
-                                                                
-                                                                available_qty = float(stock['当前库存'])
-                                                                if available_qty > 0:
-                                                                    used_qty = min(remaining_qty, available_qty)
-                                                                    cost_price = float(stock['入库单价'])
-                                                                    profit = (out_price - cost_price) * used_qty
-                                                                    
-                                                                    details_content += (
-                                                                        f"    - 数量: {used_qty:.0f} | "
-                                                                        f"入库价: ¥{cost_price:.2f} | "
-                                                                        f"出库价: ¥{out_price:.2f} | "
-                                                                        f"毛利: ¥{profit:.2f}\n"
-                                                                    )
-                                                                    
-                                                                    remaining_qty -= used_qty
-
-                                                            if remaining_qty > 0:
-                                                                details_content += f"    ⚠️ 警告：还有 {remaining_qty:.0f} 个单位未能匹配到库存\n"
+                                                        # 显示按入库单价排序的出库记录
+                                                        for _, stock in stock_df.iterrows():
+                                                            cost_price = float(stock['入库单价'])
+                                                            out_qty_from_batch = float(stock['累计出库数量'])
+                                                            profit = (out_price - cost_price) * out_qty_from_batch
+                                                            
+                                                            details_content += (
+                                                                f"    - 入库价: ¥{cost_price:.2f} | "
+                                                                f"出库价: ¥{out_price:.2f} | "
+                                                                f"出库数量: {out_qty_from_batch:.0f} | "
+                                                                f"毛利: ¥{profit:.2f}\n"
+                                                            )
                                                 
                                                 success_content["body"]["elements"].append({
                                                     "tag": "markdown",
