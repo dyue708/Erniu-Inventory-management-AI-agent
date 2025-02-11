@@ -422,6 +422,7 @@ class MessageProcessor:
 
                                                 # 添加商品明细
                                                 total_amount = 0
+                                                total_profit = 0  # 添加总毛利变量
                                                 details_content = ""
 
                                                 # 遍历每个商品组
@@ -434,9 +435,17 @@ class MessageProcessor:
                                                     group_total_amount = sum(float(r['出库总价']) for r in records)
                                                     total_amount += group_total_amount
                                                     
+                                                    # 计算该商品组的毛利
+                                                    group_total_profit = sum(
+                                                        (float(r['出库单价']) - float(r['入库单价'])) * float(r['出库数量'])
+                                                        for r in records
+                                                    )
+                                                    total_profit += group_total_profit
+                                                    
                                                     details_content += (
                                                         f"  总数量: {group_total_qty:.0f} | "
-                                                        f"总金额: ¥{group_total_amount:.2f}\n"
+                                                        f"总金额: ¥{group_total_amount:.2f} | "
+                                                        f"毛利: ¥{group_total_profit:.2f}\n"
                                                     )
                                                     
                                                     # 显示每条出库记录的详细信息
@@ -495,7 +504,7 @@ class MessageProcessor:
                                                 
                                                 success_content["body"]["elements"].append({
                                                     "tag": "markdown",
-                                                    "content": f"\n💰 **订单总计：** ¥{total_amount:.2f}",
+                                                    "content": f"\n💰 **订单总计：** ¥{total_amount:.2f} | **总毛利：** ¥{total_profit:.2f}",
                                                     "text_align": "left",
                                                     "text_size": "normal_v2"
                                                 })
