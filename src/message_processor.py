@@ -725,7 +725,6 @@ class MessageProcessor:
                                             finally:
                                                 # 无论成功与否，都确保文件被标记为已处理
                                                 self.processed_files.add(msg_file)
-                                                os.remove(msg_file)
                                                 return True
                                         else:
                                             raise ValueError("入库记录写入失败")
