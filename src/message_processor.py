@@ -52,7 +52,7 @@ class MessageProcessor:
         self.warehouse_mgr = WarehouseManager()
         self.product_mgr = ProductManager()
         self.running = True  # 控制处理循环
-        self.sleep_interval = 1  # 无消息时的休眠时间（秒）
+        self.sleep_interval = 0.1  # 无消息时的休眠时间（秒）
         
         # 添加用户锁字典
         self.user_locks = defaultdict(Lock)
