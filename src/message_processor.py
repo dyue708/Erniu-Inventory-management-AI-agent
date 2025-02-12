@@ -395,6 +395,7 @@ class MessageProcessor:
                                             finally:
                                                 # 无论成功与否，都确保文件被标记为已处理
                                                 self.processed_files.add(msg_file)
+                                                os.remove(msg_file)
                                                 # 确保在库存不足时立即返回
                                                 return True
                                             
@@ -539,6 +540,7 @@ class MessageProcessor:
                                             finally:
                                                 # 无论成功与否，都确保文件被标记为已处理
                                                 self.processed_files.add(msg_file)
+                                                os.remove(msg_file)
                                                 return True
                                         else:
                                             raise Exception("出库记录写入失败")
@@ -550,6 +552,10 @@ class MessageProcessor:
                                             receive_id=data.get('operator_id'),
                                             content=error_msg
                                         )
+                                    finally:
+                                        self.processed_files.add(msg_file)
+                                        os.remove(msg_file)
+                                        return True
                                 elif action_value.get("action") == "submit" and action_value.get("form_type") == "inbound":
                                     try:
                                         # 收集所有商品数据
@@ -607,7 +613,9 @@ class MessageProcessor:
                                                         "入库单价": price,
                                                         "入库总价": quantity * price,
                                                         "操作者ID": [{"id": operator_id}],
-                                                        "操作时间": current_time
+                                                        "操作时间": current_time,
+                                                        "快递单号": form_data.get('tracking', ''),
+                                                        "快递手机号": form_data.get('phone', '')
                                                     }
                                                 })
                                             i += 1
@@ -665,6 +673,14 @@ class MessageProcessor:
                                                         f"小计: ¥{fields['入库总价']:.2f}\n"
                                                     )
                                                 
+                                                # 添加快递信息到成功消息
+                                                if fields.get('tracking') or fields.get('phone'):
+                                                    details_content += (
+                                                        f"📬 **快递信息：**\n" + 
+                                                        (f"- 快递单号：{fields['快递单号']}\n" if fields.get('tracking') else "") +
+                                                        (f"- 收件手机：{fields['快递手机号']}\n" if fields.get('phone') else "")
+                                                    )
+                                                
                                                 success_content["body"]["elements"].append({
                                                     "tag": "markdown",
                                                     "content": details_content,
@@ -709,6 +725,7 @@ class MessageProcessor:
                                             finally:
                                                 # 无论成功与否，都确保文件被标记为已处理
                                                 self.processed_files.add(msg_file)
+                                                os.remove(msg_file)
                                                 return True
                                         else:
                                             raise ValueError("入库记录写入失败")
@@ -722,6 +739,7 @@ class MessageProcessor:
                                         )
                                         # 确保在发生错误时也标记文件为已处理
                                         self.processed_files.add(msg_file)
+                                        os.remove(msg_file)
                                         return True
                             elif message_type in ["p2p_message", "message"]:
                                 try:
@@ -1081,7 +1099,47 @@ class MessageProcessor:
                                     ],
                                     "margin": "0px 0px 0px 0px"
                                 } for i in range(product_rows)
-                            ] + [
+                            ] + [ {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "div",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "物流信息",
+                                        "text_size": "normal_v2",
+                                        "text_align": "left",
+                                        "text_color": "default"
+                                    },
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入快递单号"
+                                    },
+                                    "default_value": "",
+                                    "width": "default",
+                                    "name": "tracking",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "input",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请输入收件人手机号"
+                                    },
+                                    "default_value": "",
+                                    "width": "default",
+                                    "name": "phone",
+                                    "margin": "0px 0px 0px 0px"
+                                },
+                                {
+                                    "tag": "hr",
+                                    "margin": "0px 0px 0px 0px"
+                                },
                                 {
                                     "tag": "hr",
                                     "margin": "0px 0px 0px 0px"
