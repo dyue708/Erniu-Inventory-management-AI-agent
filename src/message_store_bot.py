@@ -291,7 +291,7 @@ class FeishuBot:
             return P2CardActionTriggerResponse({
                 "toast": {
                     "type": "success",
-                    "content": "提交成功！"
+                    "content": "请求提交成功，处理中......"
                 }
             })
             

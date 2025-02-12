@@ -121,7 +121,7 @@ class MessageProcessor:
                                 if action_value.get("action") == "add_product" and action_value.get("form_type") == "inbound":
                                     try:
                                         # 获取当前行数
-                                        current_rows = action_value.get("rows", 1)
+                                        current_rows = action_value.get("rows", 3)
                                         inbound_id = action_value.get("inbound_id")
                                         
                                         # 生成新的表单
@@ -177,7 +177,7 @@ class MessageProcessor:
                                         logger.info(f"Received outbound add_product action with data: {json.dumps(action_value, indent=2)}")
                                         
                                         # 获取当前行数
-                                        current_rows = action_value.get("rows", 1)
+                                        current_rows = action_value.get("rows", 3)
                                         outbound_id = action_value.get("outbound_id")
                                         
                                         if not outbound_id:
@@ -862,7 +862,7 @@ class MessageProcessor:
         message = '\n'.join(line for line in message.splitlines() if line.strip())
         return message.strip()
 
-    def generate_inbound_form(self, inbound_id = None, product_rows=1) -> dict:
+    def generate_inbound_form(self, inbound_id = None, product_rows=3) -> dict:
         try:
             # 获取当前日期
             current_date = datetime.now().strftime('%Y-%m-%d')
@@ -1186,7 +1186,7 @@ class MessageProcessor:
             logger.error(f"生成入库表单失败: {e}", exc_info=True)
             return None
 
-    def generate_outbound_form(self, outbound_id = None, product_rows=1) -> dict:
+    def generate_outbound_form(self, outbound_id = None, product_rows=3) -> dict:
         """生成出库表单卡片"""
         try:
             # 获取当前日期
