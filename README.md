@@ -100,7 +100,7 @@ https://ccn1hpzj4iz4.feishu.cn/base/DyAYb1D2RaYcbQsjdsdcZOEOnad?table=tblZiGbWqu
 ##### 事件处理器：
 - **INBOUND**: 获取入库表单
 - **OUTBOUND**: 获取出库表单
-![添加机器人菜单订阅](image/bot-menu.png)
+![添加机器人菜单订阅](image/bot_menu.png)
 
 ### 2. Deepseek 配置
 
