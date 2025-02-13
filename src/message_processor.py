@@ -378,13 +378,7 @@ class MessageProcessor:
                                                 # 检查响应
                                                 if response.success():
                                                     logger.info("Successfully updated card with insufficient stock message")
-                                                    # 删除消息文件并标记为已处理
-                                                    try:
-                                                        os.remove(msg_file)
-                                                        self.processed_files.add(msg_file)
-                                                        logger.info(f"Successfully processed and removed file: {msg_file}")
-                                                    except Exception as e:
-                                                        logger.error(f"Error removing message file: {e}")
+                                                    logger.info(f"Successfully processed file: {msg_file}")
                                                 else:
                                                     logger.error(
                                                         f"Failed to update error card: code={response.code}, "
@@ -393,9 +387,13 @@ class MessageProcessor:
                                             except Exception as e:
                                                 logger.error(f"Error updating card with insufficient stock message: {e}", exc_info=True)
                                             finally:
-                                                # 无论成功与否，都确保文件被标记为已处理
+                                                # 无论成功与否，都确保文件被标记为已处理并删除
                                                 self.processed_files.add(msg_file)
-                                                os.remove(msg_file)
+                                                try:
+                                                    os.remove(msg_file)
+                                                    logger.info(f"Successfully removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
                                                 # 确保在库存不足时立即返回
                                                 return True
                                             
@@ -538,9 +536,12 @@ class MessageProcessor:
                                                 logger.error(f"Error updating inventory: {str(e)}", exc_info=True)
                                                 raise
                                             finally:
-                                                # 无论成功与否，都确保文件被标记为已处理
-                                                self.processed_files.add(msg_file)
-                                                os.remove(msg_file)
+                                                try:
+                                                    os.remove(msg_file)
+                                                    self.processed_files.add(msg_file)
+                                                    logger.info(f"Successfully processed and removed file: {msg_file}")
+                                                except Exception as e:
+                                                    logger.error(f"Error removing message file: {e}")
                                                 return True
                                         else:
                                             raise Exception("出库记录写入失败")
@@ -553,8 +554,12 @@ class MessageProcessor:
                                             content=error_msg
                                         )
                                     finally:
-                                        self.processed_files.add(msg_file)
-                                        os.remove(msg_file)
+                                        try:
+                                            os.remove(msg_file)
+                                            self.processed_files.add(msg_file)
+                                            logger.info(f"Successfully processed and removed file: {msg_file}")
+                                        except Exception as e:
+                                            logger.error(f"Error removing message file: {e}")
                                         return True
                                 elif action_value.get("action") == "submit" and action_value.get("form_type") == "inbound":
                                     try:
@@ -737,8 +742,11 @@ class MessageProcessor:
                                             content=error_msg
                                         )
                                         # 确保在发生错误时也标记文件为已处理
-                                        self.processed_files.add(msg_file)
-                                        os.remove(msg_file)
+                                        try:
+                                            self.processed_files.add(msg_file)
+                                            os.remove(msg_file)
+                                        except Exception as e:
+                                            logger.error(f"Error removing message file: {e}")
                                         return True
                             elif message_type in ["p2p_message", "message"]:
                                 try:
