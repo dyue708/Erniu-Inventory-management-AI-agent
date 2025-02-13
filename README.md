@@ -39,6 +39,7 @@
       "base:table:read",
       "base:table:update",
       "bitable:app",
+      "cardkit:card:write",
       "im:chat",
       "im:message",
       "im:message.group_at_msg:readonly",
@@ -64,12 +65,15 @@
 #### 1.4 事件订阅
 1. 配置 Webhook URL
 https://open.feishu.cn/api-explorer/loading 
-或者运行 message_store_bot.py 后获取
+或者运行 message_store_bot.py 后获取  使用长链接接收事件
 2. 设置验证 token 和加密 key
 3. 订阅以下事件：
    - im.message.receive_v1
-   - im.chat.member.bot.added_v1
-   - im.chat.member.bot.deleted_v1
+   - application.bot.menu_v6
+
+4. 订阅卡片交互回调
+   - card.action.trigger
+
 
 #### 1.5 飞书表格准备
 创建并配置以下表格：
@@ -89,6 +93,14 @@ https://ccn1hpzj4iz4.feishu.cn/base/DyAYb1D2RaYcbQsjdsdcZOEOnad?table=tblZiGbWqu
 
 > ⚠️ **注意**：必须将应用添加到所有相关表格中，否则机器人将无法读写数据
 
+
+#### 1.7 飞书卡片交互功能
+增加了飞书卡片交互功能，可以实现更加复杂的交互操作。需要使用飞书机器人菜单功能，并添加菜单事件处理器。
+
+##### 事件处理器：
+- **INBOUND**: 获取入库表单
+- **OUTBOUND**: 获取出库表单
+![添加机器人菜单订阅](image/bot-menu.png)
 
 ### 2. Deepseek 配置
 
@@ -154,9 +166,8 @@ python run.py
 - 消息处理服务：处理库存相关指令
 
 发送消息到飞书群组，或者私聊对应机器人，即可触发机器人处理库存相关指令
+也可以在机器人私聊界面获取 入库 以及 出库表单 完成入库 出库操作
 
-增加了飞书卡片交互功能，可以实现更加复杂的交互操作 需要使用飞书机器人菜单功能 并添加菜单事件处理器
-事件处理器：
-INBOUND 获取入库表单
-OUTBOUND 获取出库表单
+
+
 
