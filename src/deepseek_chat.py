@@ -196,7 +196,7 @@ class DeepSeekChat:
             )
             # 只有当备注不为空时才添加备注信息
             if pd.notna(row.get('商品备注')) and row['商品备注']:
-                product_str += f"  商品备注: {row['商品备注']}\n"
+                product_str += f"  商品备注（别称）: {row['商品备注']}\n"
             product_str += "\n"  # 在每个商品之间添加空行
         return product_str
 

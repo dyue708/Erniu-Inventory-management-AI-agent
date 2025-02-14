@@ -1814,7 +1814,7 @@ class MessageProcessor:
                 options.append({
                     "text": {
                         "tag": "plain_text",
-                        "content": f"{row['仓库名']} - {row['仓库备注']}"
+                        "content": f"{row['仓库名']}"
                     },
                     "value": row['仓库名']
                 })
@@ -1832,7 +1832,7 @@ class MessageProcessor:
                 options.append({
                     "text": {
                         "tag": "plain_text",
-                        "content": f"{row['商品名称']} {row['商品规格']}"
+                        "content": f"{row['商品名称']}"
                     },
                     "value": row['商品ID']
                 })
