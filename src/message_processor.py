@@ -110,6 +110,7 @@ class MessageProcessor:
                                 print("开始处理卡片操作...")  # 调试日志
                                 data = message.get("data", {})
                                 action_value = data.get("action_value", {})
+                                form_data = data.get("form_data",{})
                                 
                                 if isinstance(action_value, str):
                                     action_value = json.loads(action_value)
@@ -118,21 +119,21 @@ class MessageProcessor:
                                 raw_data = json.loads(data.get("raw_data", "{}"))
                                 message_id = raw_data.get("event", {}).get("context", {}).get("open_message_id")
                                 
-                                if action_value.get("action") == "add_product" and action_value.get("form_type") == "inbound":
+                                if action_value.get("action") == "confirm_products" and action_value.get("form_type") == "inbound":
                                     try:
                                         # 获取当前行数
-                                        current_rows = action_value.get("rows", 3)
+                                        current_products = form_data.get("products", [])
                                         inbound_id = action_value.get("inbound_id")
                                         
                                         # 生成新的表单
                                         new_card = self.generate_inbound_form(
                                             inbound_id=inbound_id,
-                                            product_rows=current_rows
+                                            selected_products = current_products
                                         )
                                         
                                         if new_card and message_id:
                                             # 使用 SDK 更新卡片
-                                            logger.info(f"Updating card message: {message_id} with {current_rows} rows")
+                                            logger.info(f"Updating card message: {message_id} with {current_products}")
                                             
                                             # 构造请求对象
                                             request = PatchMessageRequest.builder() \
@@ -161,7 +162,7 @@ class MessageProcessor:
                                                     f"msg={response.msg}, log_id={response.get_log_id()}"
                                                 )
                                         else:
-                                            logger.error(f"Invalid card update parameters: message_id={message_id}, rows={current_rows}")
+                                            logger.error(f"Invalid card update parameters: message_id={message_id}, rows={current_products}")
                                             
                                     except Exception as e:
                                         logger.error(f"处理添加商品操作失败: {e}", exc_info=True)
@@ -171,24 +172,24 @@ class MessageProcessor:
                                                 receive_id=operator_id,
                                                 content=f"❌ 添加商品失败: {str(e)}\n请重试或联系管理员"
                                             )
-                                elif action_value.get("action") == "add_product" and action_value.get("form_type") == "outbound":
+                                elif action_value.get("action") == "confirm_products" and action_value.get("form_type") == "outbound":
                                     try:
                                         # 详细记录接收到的数据
                                         logger.info(f"Received outbound add_product action with data: {json.dumps(action_value, indent=2)}")
                                         
                                         # 获取当前行数
-                                        current_rows = action_value.get("rows", 3)
+                                        current_products = form_data.get("products", [])
                                         outbound_id = action_value.get("outbound_id")
                                         
                                         if not outbound_id:
                                             raise ValueError("Missing outbound_id in action_value")
                                             
-                                        logger.info(f"Generating outbound form with {current_rows} rows for outbound_id: {outbound_id}")
+                                        logger.info(f"Generating outbound form with {current_products} products for outbound_id: {outbound_id}")
                                         
                                         # 生成新的表单
                                         new_card = self.generate_outbound_form(
                                             outbound_id=outbound_id,
-                                            product_rows=current_rows
+                                            selected_products=current_products
                                         )
                                         
                                         if not new_card:
@@ -887,17 +888,355 @@ class MessageProcessor:
         message = '\n'.join(line for line in message.splitlines() if line.strip())
         return message.strip()
 
-    def generate_inbound_form(self, inbound_id = None, product_rows=3) -> dict:
+    def generate_inbound_form(self, inbound_id=None, selected_products=None) -> dict:
         try:
             # 获取当前日期
             current_date = datetime.now().strftime('%Y-%m-%d')
             if inbound_id is None:
                 inbound_id = f"IN-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            
             # 获取仓库和商品选项
             warehouse_options = self.get_warehouse_options()
             product_options = self.get_product_options()
             
-            # 构建卡片
+            # 构建基础表单元素
+            form_elements = [
+                # 入库信息部分
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "入库信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "column_set",
+                    "horizontal_spacing": "8px",
+                    "horizontal_align": "left",
+                    "columns": [
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "date_picker",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择入库日期"
+                                    },
+                                    "width": "default",
+                                    "initial_date": current_date,
+                                    "name": "inbound_date",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        },
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "select_static",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择仓库"
+                                    },
+                                    "options": warehouse_options,
+                                    "type": "default",
+                                    "width": "default",
+                                    "name": "warehouse",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        }
+                    ],
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                # 供应商信息部分
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "供应商信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "input",
+                    "placeholder": {
+                        "tag": "plain_text",
+                        "content": "请输入供应商"
+                    },
+                    "default_value": "",
+                    "width": "default",
+                    "name": "supplier",
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                # 商品信息标题
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "商品信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                }
+            ]
+
+            # 商品选择部分 - 始终显示
+            form_elements.extend([
+                {
+                    "tag": "column_set",
+                    "horizontal_spacing": "8px",
+                    "horizontal_align": "left",
+                    "columns": [
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "multi_select_static",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择商品（多选）"
+                                    },
+                                    "options": product_options,
+                                    "type": "default",
+                                    "width": "default",
+                                    "required": True,
+                                    "name": "products",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 2
+                        },
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "button",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "确认商品"
+                                    },
+                                    "type": "primary",
+                                    "width": "default",
+                                    "form_action_type": "submit",
+                                    "behaviors": [
+                                        {
+                                            "type": "callback",
+                                            "value": {
+                                                "action": "confirm_products",
+                                                "inbound_id": inbound_id,
+                                                "form_type": "inbound"
+                                            }
+                                        }
+                                    ],
+                                    "name": "confirm_products",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        }
+                    ],
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"}
+            ])
+
+            # 如果有选定的商品，为每个商品生成一行输入框
+            if selected_products:
+                for i, product_id in enumerate(selected_products):
+                    # 获取商品信息
+                    product_info = next((p for p in product_options if p["value"] == product_id), None)
+                    if product_info:
+                        # 只创建包含当前商品的选项列表
+                        single_product_option = [{
+                            "text": product_info["text"],
+                            "value": product_info["value"]
+                        }]
+                        
+                        form_elements.append({
+                            "tag": "column_set",
+                            "horizontal_spacing": "8px",
+                            "horizontal_align": "left",
+                            "columns": [
+                                {
+                                    "tag": "column",
+                                    "width": "weighted",
+                                    "elements": [
+                                        {
+                                            "tag": "select_static",
+                                            "placeholder": {
+                                                "tag": "plain_text",
+                                                "content": "请选择商品名"
+                                            },
+                                            "options": single_product_option,  # 只使用当前商品的选项
+                                            "initial_option": product_id,
+                                            "type": "default",
+                                            "width": "default",
+                                            "name": f"product_{i}",
+                                            "margin": "0px 0px 0px 0px"
+                                        }
+                                    ],
+                                    "vertical_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "vertical_align": "top",
+                                    "weight": 1
+                                },
+                                {
+                                    "tag": "column",
+                                    "width": "weighted",
+                                    "elements": [
+                                        {
+                                            "tag": "input",
+                                            "placeholder": {
+                                                "tag": "plain_text",
+                                                "content": "请输入数量"
+                                            },
+                                            "default_value": "",
+                                            "width": "default",
+                                            "name": f"quantity_{i}",
+                                            "margin": "0px 0px 0px 0px"
+                                        }
+                                    ],
+                                    "vertical_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "vertical_align": "top",
+                                    "weight": 1
+                                },
+                                {
+                                    "tag": "column",
+                                    "width": "weighted",
+                                    "elements": [
+                                        {
+                                            "tag": "input",
+                                            "placeholder": {
+                                                "tag": "plain_text",
+                                                "content": "请输入单价"
+                                            },
+                                            "default_value": "",
+                                            "width": "default",
+                                            "name": f"price_{i}",
+                                            "margin": "0px 0px 0px 0px"
+                                        }
+                                    ],
+                                    "vertical_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "vertical_align": "top",
+                                    "weight": 1
+                                }
+                            ],
+                            "margin": "0px 0px 0px 0px"
+                        })
+                form_elements.append({"tag": "hr", "margin": "0px 0px 0px 0px"})
+
+            # 添加物流信息和提交按钮
+            form_elements.extend([
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "物流信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "input",
+                    "placeholder": {
+                        "tag": "plain_text",
+                        "content": "请输入快递单号"
+                    },
+                    "default_value": "",
+                    "width": "default",
+                    "name": "tracking",
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "input",
+                    "placeholder": {
+                        "tag": "plain_text",
+                        "content": "请输入收件人手机号"
+                    },
+                    "default_value": "",
+                    "width": "default",
+                    "name": "phone",
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                {
+                    "tag": "column_set",
+                    "horizontal_align": "left",
+                    "columns": [
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "button",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "完成入库"
+                                    },
+                                    "type": "primary",
+                                    "width": "default",
+                                    "form_action_type": "submit",
+                                    "behaviors": [
+                                        {
+                                            "type": "callback",
+                                            "value": {
+                                                "action": "submit",
+                                                "inbound_id": inbound_id,
+                                                "form_type": "inbound"
+                                            }
+                                        }
+                                    ],
+                                    "name": "submit",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        }
+                    ],
+                    "margin": "0px 0px 0px 0px"
+                }
+            ])
+
+            # 构建完整卡片
             card = {
                 "schema": "2.0",
                 "config": {
@@ -917,313 +1256,8 @@ class MessageProcessor:
                     "padding": "12px 12px 12px 12px",
                     "elements": [
                         {
-                            "tag": "div",
-                            "text": {
-                                "tag": "plain_text",
-                                "content": "",
-                                "text_size": "normal_v2",
-                                "text_align": "left",
-                                "text_color": "default"
-                            },
-                            "margin": "0px 0px 0px 0px"
-                        },
-                        {
                             "tag": "form",
-                            "elements": [
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "入库信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "column_set",
-                                    "horizontal_spacing": "8px",
-                                    "horizontal_align": "left",
-                                    "columns": [
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "date_picker",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请选择入库日期"
-                                                    },
-                                                    "width": "default",
-                                                    "initial_date": current_date,
-                                                    "name": "inbound_date",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "select_static",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请选择仓库"
-                                                    },
-                                                    "options": warehouse_options,
-                                                    "type": "default",
-                                                    "width": "default",
-                                                    "name": "warehouse",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        }
-                                    ],
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "供应商信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "input",
-                                    "placeholder": {
-                                        "tag": "plain_text",
-                                        "content": "请输入"
-                                    },
-                                    "default_value": "",
-                                    "width": "default",
-                                    "name": "supplier",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "商品信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                }
-                            ] + [
-                                {
-                                    "tag": "column_set",
-                                    "horizontal_spacing": "8px",
-                                    "horizontal_align": "left",
-                                    "columns": [
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "select_static",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请选择商品名"
-                                                    },
-                                                    "options": product_options,
-                                                    "type": "default",
-                                                    "width": "default",
-                                                    "name": f"product_{i}",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "input",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请输入数量"
-                                                    },
-                                                    "default_value": "",
-                                                    "width": "default",
-                                                    "name": f"quantity_{i}",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "input",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请输入单价"
-                                                    },
-                                                    "default_value": "",
-                                                    "width": "default",
-                                                    "name": f"price_{i}",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        }
-                                    ],
-                                    "margin": "0px 0px 0px 0px"
-                                } for i in range(product_rows)
-                            ] + [ {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "物流信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "input",
-                                    "placeholder": {
-                                        "tag": "plain_text",
-                                        "content": "请输入快递单号"
-                                    },
-                                    "default_value": "",
-                                    "width": "default",
-                                    "name": "tracking",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "input",
-                                    "placeholder": {
-                                        "tag": "plain_text",
-                                        "content": "请输入收件人手机号"
-                                    },
-                                    "default_value": "",
-                                    "width": "default",
-                                    "name": "phone",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "column_set",
-                                    "horizontal_align": "left",
-                                    "columns": [
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "button",
-                                                    "text": {
-                                                        "tag": "plain_text",
-                                                        "content": "完成入库"
-                                                    },
-                                                    "type": "primary",
-                                                    "width": "default",
-                                                    "behaviors": [
-                                                        {
-                                                            "type": "callback",
-                                                            "value": {
-                                                                "action": "submit",
-                                                                "inbound_id": inbound_id,
-                                                                "form_type": "inbound"
-                                                            }
-                                                        }
-                                                    ],
-                                                    "form_action_type": "submit",
-                                                    "name": "submit"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "button",
-                                                    "text": {
-                                                        "tag": "plain_text",
-                                                        "content": "添加商品"
-                                                    },
-                                                    "type": "default",
-                                                    "width": "default",
-                                                    "form_action_type": "submit",
-                                                    "size": "medium",
-                                                    "behaviors": [
-                                                        {
-                                                            "type": "callback",
-                                                            "value": {
-                                                                "action": "add_product",
-                                                                "inbound_id": inbound_id,
-                                                                "rows": product_rows + 1 ,
-                                                                "form_type": "inbound"
-                                                            }
-                                                        }
-                                                    ],
-                                                    "name": "add_product",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        }
-                                    ],
-                                    "margin": "0px 0px 0px 0px"
-                                }
-                            ],
+                            "elements": form_elements,
                             "direction": "vertical",
                             "padding": "4px 0px 4px 0px",
                             "margin": "0px 0px 0px 0px",
@@ -1244,14 +1278,14 @@ class MessageProcessor:
                     "padding": "12px 12px 12px 12px"
                 }
             }
-            
+
             return card
-            
+
         except Exception as e:
             logger.error(f"生成入库表单失败: {e}", exc_info=True)
             return None
 
-    def generate_outbound_form(self, outbound_id = None, product_rows=3) -> dict:
+    def generate_outbound_form(self, outbound_id=None, selected_products=None) -> dict:
         """生成出库表单卡片"""
         try:
             # 获取当前日期
@@ -1262,7 +1296,343 @@ class MessageProcessor:
             warehouse_options = self.get_warehouse_options()
             product_options = self.get_product_options()
             
-            # 构建卡片
+            # 构建基础表单元素
+            form_elements = [
+                # 出库信息部分
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "出库信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "column_set",
+                    "horizontal_spacing": "8px",
+                    "horizontal_align": "left",
+                    "columns": [
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "date_picker",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择出库日期"
+                                    },
+                                    "width": "default",
+                                    "initial_date": current_date,
+                                    "name": "outbound_date",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        },
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "select_static",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择仓库"
+                                    },
+                                    "options": warehouse_options,
+                                    "type": "default",
+                                    "width": "default",
+                                    "name": "warehouse",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        }
+                    ],
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                # 客户信息部分
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "客户信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "input",
+                    "placeholder": {
+                        "tag": "plain_text",
+                        "content": "请输入客户名称"
+                    },
+                    "default_value": "",
+                    "width": "default",
+                    "name": "customer",
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                # 商品信息标题
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "商品信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                }
+            ]
+
+            # 商品选择部分 - 始终显示
+            form_elements.extend([
+                {
+                    "tag": "column_set",
+                    "horizontal_spacing": "8px",
+                    "horizontal_align": "left",
+                    "columns": [
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "multi_select_static",
+                                    "placeholder": {
+                                        "tag": "plain_text",
+                                        "content": "请选择商品（多选）"
+                                    },
+                                    "options": product_options,
+                                    "type": "default",
+                                    "width": "default",
+                                    "required": True,
+                                    "name": "products",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 2
+                        },
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "button",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "确认商品"
+                                    },
+                                    "type": "primary",
+                                    "width": "default",
+                                    "form_action_type": "submit",
+                                    "behaviors": [
+                                        {
+                                            "type": "callback",
+                                            "value": {
+                                                "action": "confirm_products",
+                                                "outbound_id": outbound_id,
+                                                "form_type": "outbound"
+                                            }
+                                        }
+                                    ],
+                                    "name": "confirm_products",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        }
+                    ],
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"}
+            ])
+
+            # 如果有选定的商品，为每个商品生成一行输入框
+            if selected_products:
+                for i, product_id in enumerate(selected_products):
+                    # 获取商品信息
+                    product_info = next((p for p in product_options if p["value"] == product_id), None)
+                    if product_info:
+                        # 只创建包含当前商品的选项列表
+                        single_product_option = [{
+                            "text": product_info["text"],
+                            "value": product_info["value"]
+                        }]
+                        
+                        form_elements.append({
+                            "tag": "column_set",
+                            "horizontal_spacing": "8px",
+                            "horizontal_align": "left",
+                            "columns": [
+                                {
+                                    "tag": "column",
+                                    "width": "weighted",
+                                    "elements": [
+                                        {
+                                            "tag": "select_static",
+                                            "placeholder": {
+                                                "tag": "plain_text",
+                                                "content": "请选择商品名"
+                                            },
+                                            "options": single_product_option,
+                                            "initial_option": product_id,
+                                            "type": "default",
+                                            "width": "default",
+                                            "name": f"product_{i}",
+                                            "margin": "0px 0px 0px 0px"
+                                        }
+                                    ],
+                                    "vertical_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "vertical_align": "top",
+                                    "weight": 1
+                                },
+                                {
+                                    "tag": "column",
+                                    "width": "weighted",
+                                    "elements": [
+                                        {
+                                            "tag": "input",
+                                            "placeholder": {
+                                                "tag": "plain_text",
+                                                "content": "请输入数量"
+                                            },
+                                            "default_value": "",
+                                            "width": "default",
+                                            "name": f"quantity_{i}",
+                                            "margin": "0px 0px 0px 0px"
+                                        }
+                                    ],
+                                    "vertical_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "vertical_align": "top",
+                                    "weight": 1
+                                },
+                                {
+                                    "tag": "column",
+                                    "width": "weighted",
+                                    "elements": [
+                                        {
+                                            "tag": "input",
+                                            "placeholder": {
+                                                "tag": "plain_text",
+                                                "content": "请输入单价"
+                                            },
+                                            "default_value": "",
+                                            "width": "default",
+                                            "name": f"price_{i}",
+                                            "margin": "0px 0px 0px 0px"
+                                        }
+                                    ],
+                                    "vertical_spacing": "8px",
+                                    "horizontal_align": "left",
+                                    "vertical_align": "top",
+                                    "weight": 1
+                                }
+                            ],
+                            "margin": "0px 0px 0px 0px"
+                        })
+                form_elements.append({"tag": "hr", "margin": "0px 0px 0px 0px"})
+
+            # 添加物流信息和提交按钮
+            form_elements.extend([
+                {
+                    "tag": "div",
+                    "text": {
+                        "tag": "plain_text",
+                        "content": "物流信息",
+                        "text_size": "normal_v2",
+                        "text_align": "left",
+                        "text_color": "default"
+                    },
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "input",
+                    "placeholder": {
+                        "tag": "plain_text",
+                        "content": "请输入快递单号"
+                    },
+                    "default_value": "",
+                    "width": "default",
+                    "name": "tracking",
+                    "margin": "0px 0px 0px 0px"
+                },
+                {
+                    "tag": "input",
+                    "placeholder": {
+                        "tag": "plain_text",
+                        "content": "请输入收件人手机号"
+                    },
+                    "default_value": "",
+                    "width": "default",
+                    "name": "phone",
+                    "margin": "0px 0px 0px 0px"
+                },
+                {"tag": "hr", "margin": "0px 0px 0px 0px"},
+                {
+                    "tag": "column_set",
+                    "horizontal_align": "left",
+                    "columns": [
+                        {
+                            "tag": "column",
+                            "width": "weighted",
+                            "elements": [
+                                {
+                                    "tag": "button",
+                                    "text": {
+                                        "tag": "plain_text",
+                                        "content": "完成出库"
+                                    },
+                                    "type": "primary",
+                                    "width": "default",
+                                    "form_action_type": "submit",
+                                    "behaviors": [
+                                        {
+                                            "type": "callback",
+                                            "value": {
+                                                "action": "submit",
+                                                "outbound_id": outbound_id,
+                                                "form_type": "outbound"
+                                            }
+                                        }
+                                    ],
+                                    "name": "submit",
+                                    "margin": "0px 0px 0px 0px"
+                                }
+                            ],
+                            "vertical_spacing": "8px",
+                            "horizontal_align": "left",
+                            "vertical_align": "top",
+                            "weight": 1
+                        }
+                    ],
+                    "margin": "0px 0px 0px 0px"
+                }
+            ])
+
+            # 构建完整卡片
             card = {
                 "schema": "2.0",
                 "config": {
@@ -1282,310 +1652,8 @@ class MessageProcessor:
                     "padding": "12px 12px 12px 12px",
                     "elements": [
                         {
-                            "tag": "div",
-                            "text": {
-                                "tag": "plain_text",
-                                "content": "",
-                                "text_size": "normal_v2",
-                                "text_align": "left",
-                                "text_color": "default"
-                            },
-                            "margin": "0px 0px 0px 0px"
-                        },
-                        {
                             "tag": "form",
-                            "elements": [
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "出库信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "column_set",
-                                    "horizontal_spacing": "8px",
-                                    "horizontal_align": "left",
-                                    "columns": [
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "date_picker",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请选择出库日期"
-                                                    },
-                                                    "width": "default",
-                                                    "initial_date": current_date,
-                                                    "name": "outbound_date",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "select_static",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请选择仓库"
-                                                    },
-                                                    "options": warehouse_options,
-                                                    "type": "default",
-                                                    "width": "default",
-                                                    "name": "warehouse",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        }
-                                    ],
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "客户信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "input",
-                                    "placeholder": {
-                                        "tag": "plain_text",
-                                        "content": "请输入客户名称"
-                                    },
-                                    "default_value": "",
-                                    "width": "default",
-                                    "name": "customer",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "商品信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                }
-                            ] + [
-                                {
-                                    "tag": "column_set",
-                                    "horizontal_spacing": "8px",
-                                    "horizontal_align": "left",
-                                    "columns": [
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "select_static",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请选择商品名"
-                                                    },
-                                                    "options": product_options,
-                                                    "type": "default",
-                                                    "width": "default",
-                                                    "name": f"product_{i}",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "input",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请输入数量"
-                                                    },
-                                                    "default_value": "",
-                                                    "width": "default",
-                                                    "name": f"quantity_{i}",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "input",
-                                                    "placeholder": {
-                                                        "tag": "plain_text",
-                                                        "content": "请输入单价"
-                                                    },
-                                                    "default_value": "",
-                                                    "width": "default",
-                                                    "name": f"price_{i}",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        }
-                                    ],
-                                    "margin": "0px 0px 0px 0px"
-                                } for i in range(product_rows)
-                            ] + [
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "div",
-                                    "text": {
-                                        "tag": "plain_text",
-                                        "content": "物流信息",
-                                        "text_size": "normal_v2",
-                                        "text_align": "left",
-                                        "text_color": "default"
-                                    },
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "input",
-                                    "placeholder": {
-                                        "tag": "plain_text",
-                                        "content": "请输入快递单号"
-                                    },
-                                    "default_value": "",
-                                    "width": "default",
-                                    "name": "tracking",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "input",
-                                    "placeholder": {
-                                        "tag": "plain_text",
-                                        "content": "请输入收件人手机号"
-                                    },
-                                    "default_value": "",
-                                    "width": "default",
-                                    "name": "phone",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "hr",
-                                    "margin": "0px 0px 0px 0px"
-                                },
-                                {
-                                    "tag": "column_set",
-                                    "horizontal_align": "left",
-                                    "columns": [
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "button",
-                                                    "text": {
-                                                        "tag": "plain_text",
-                                                        "content": "完成出库"
-                                                    },
-                                                    "type": "primary",
-                                                    "width": "default",
-                                                    "behaviors": [
-                                                        {
-                                                            "type": "callback",
-                                                            "value": {
-                                                                "action": "submit",
-                                                                "outbound_id": outbound_id,
-                                                                "form_type": "outbound"
-                                                            }
-                                                        }
-                                                    ],
-                                                    "form_action_type": "submit",
-                                                    "name": "submit"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        },
-                                        {
-                                            "tag": "column",
-                                            "width": "weighted",
-                                            "elements": [
-                                                {
-                                                    "tag": "button",
-                                                    "text": {
-                                                        "tag": "plain_text",
-                                                        "content": "添加商品"
-                                                    },
-                                                    "type": "default",
-                                                    "width": "default",
-                                                    "form_action_type": "submit",
-                                                    "size": "medium",
-                                                    "behaviors": [
-                                                        {
-                                                            "type": "callback",
-                                                            "value": {
-                                                                "action": "add_product",
-                                                                "outbound_id": outbound_id,
-                                                                "rows": product_rows + 1,
-                                                                "form_type": "outbound"
-                                                            }
-                                                        }
-                                                    ],
-                                                    "name": "add_product",
-                                                    "margin": "0px 0px 0px 0px"
-                                                }
-                                            ],
-                                            "vertical_spacing": "8px",
-                                            "horizontal_align": "left",
-                                            "vertical_align": "top",
-                                            "weight": 1
-                                        }
-                                    ],
-                                    "margin": "0px 0px 0px 0px"
-                                }
-                            ],
+                            "elements": form_elements,
                             "direction": "vertical",
                             "padding": "4px 0px 4px 0px",
                             "margin": "0px 0px 0px 0px",
