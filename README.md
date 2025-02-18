@@ -108,6 +108,9 @@ https://ccn1hpzj4iz4.feishu.cn/base/DyAYb1D2RaYcbQsjdsdcZOEOnad?table=tblZiGbWqu
 1. 访问 [Deepseek 开放平台](https://platform.deepseek.com/) 注册账号
 2. 在开发者控制台创建并保存 API Key
 
+ps: 现在deepseek官网版本比较卡，阿里云百炼 以及 火山引擎 的版本比较稳定，可以考虑使用
+只要在env 中 将 DEEPSEEK配置的 DEEPSEEK_BASE_URL 以及 DEEPSEEK_MODEL 的值修改为 阿里云百炼 或者 火山引擎 的地址以及模型即可
+
 ## 部署指南
 
 ### 1. 环境准备
