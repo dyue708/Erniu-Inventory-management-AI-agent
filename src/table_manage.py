@@ -453,22 +453,18 @@ class OutboundManager(BaseTableManager):
         """获取指定出库单号的所有出库记录"""
         try:
             config = self.bitable_config[self.TABLE_NAME]
+            filter_expr = f'CurrentValue.[出库单号] = "{outbound_id}"'  # 单个条件不需要AND()
+            
             data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
             
             if not data or not data.get("items"):
                 return []
             
-            # 筛选指定出库单号的记录
-            outbound_records = []
-            for item in data["items"]:
-                fields = item.get("fields", {})
-                if fields.get("出库单号") == outbound_id:
-                    outbound_records.append(item)
-                
-            return outbound_records
+            return data["items"]
         
         except Exception as e:
             logger.error(f"获取出库明细失败: {e}", exc_info=True)
@@ -536,47 +532,38 @@ class InventorySummaryManager(BaseTableManager):
             # 打印调试信息
             print(f"更新库存汇总，入库数据: {inbound_data}")
             
-            # 查找现有记录
+            # 使用筛选条件查找匹配记录
+            price = float(inbound_data['入库单价'])
+            filter_expr = (
+                f'AND(CurrentValue.[商品ID] = "{inbound_data["商品ID"]}", '
+                f'CurrentValue.[仓库名] = "{inbound_data["仓库名"]}", '
+                f'ABS(CurrentValue.[入库单价] - {price}) < 0.01)'
+            )
+            
             existing_data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
 
-            # 修改这里：使用入库单价和入库数量字段
-            query_key = (
-                inbound_data['商品ID'],
-                inbound_data['仓库名'],
-                float(inbound_data['入库单价'])  # 使用入库单价字段
-            )
-
-            # 查找匹配记录
-            matching_record = None
-            record_id = None
-            
-            if existing_data and existing_data.get("items"):
-                for item in existing_data["items"]:
-                    fields = item["fields"]
-                    if (fields.get("商品ID") == query_key[0] and
-                        fields.get("仓库名") == query_key[1] and
-                        abs(float(fields.get("入库单价", 0)) - query_key[2]) < 0.01):  # 使用近似相等比较浮点数
-                        matching_record = fields
-                        record_id = item["record_id"]
-                        break
-
-            current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
-            quantity = float(inbound_data['入库数量'])  # 使用入库数量字段
-            price = float(inbound_data['入库单价'])    # 使用入库单价字段
+            current_time = int(datetime.now().timestamp() * 1000)
+            quantity = float(inbound_data['入库数量'])
             total_price = quantity * price
 
             # 打印调试信息
             print(f"处理数据: 数量={quantity}, 单价={price}, 总价={total_price}")
-            print(f"匹配记录: {matching_record}")
 
-            if matching_record:
+            if existing_data and existing_data.get("items"):
                 # 更新现有记录
-                new_inbound_qty = float(matching_record.get('累计入库数量', 0)) + quantity
-                new_current_qty = float(matching_record.get('当前库存', 0)) + quantity
-                new_inbound_total = float(matching_record.get('入库总价', 0)) + total_price
+                item = existing_data["items"][0]  # 由于筛选条件精确，应该只有一条记录
+                fields = item["fields"]
+                record_id = item["record_id"]
+                
+                print(f"匹配记录: {fields}")
+
+                new_inbound_qty = float(fields.get('累计入库数量', 0)) + quantity
+                new_current_qty = float(fields.get('当前库存', 0)) + quantity
+                new_inbound_total = float(fields.get('入库总价', 0)) + total_price
 
                 update_fields = {
                     "累计入库数量": new_inbound_qty,
@@ -636,26 +623,27 @@ class InventorySummaryManager(BaseTableManager):
         try:
             config = self.bitable_config[self.TABLE_NAME]
             
-            # 查找该商品在指定仓库的所有库存记录
+            # 使用AND()函数组合筛选条件
+            filter_expr = (
+                f'AND(CurrentValue.[商品ID] = "{outbound_data["商品ID"]}", '
+                f'CurrentValue.[仓库名] = "{outbound_data["仓库名"]}", '
+                f'CurrentValue.[当前库存] > 0)'
+            )
+            
             existing_data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
 
             if not existing_data or not existing_data.get("items"):
                 raise Exception("未找到库存记录")
 
-            # 筛选符合条件的记录并按入库单价降序排序
-            matching_records = []
-            for item in existing_data["items"]:
-                fields = item["fields"]
-                if (fields.get("商品ID") == outbound_data['商品ID'] and
-                    fields.get("仓库名") == outbound_data['仓库名'] and
-                    float(fields.get("当前库存", 0)) > 0):
-                    matching_records.append({
-                        "record_id": item["record_id"],
-                        "fields": fields
-                    })
+            # 转换记录格式并按入库单价降序排序
+            matching_records = [{
+                "record_id": item["record_id"],
+                "fields": item["fields"]
+            } for item in existing_data["items"]]
 
             if not matching_records:
                 raise Exception("没有足够的库存")
@@ -667,8 +655,8 @@ class InventorySummaryManager(BaseTableManager):
             )
 
             # 计算需要出库的数量
-            remaining_qty = float(outbound_data['出库数量'])  # 修改这里：使用出库数量
-            current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
+            remaining_qty = float(outbound_data['出库数量'])
+            current_time = int(datetime.now().timestamp() * 1000)
 
             outbound_details = []
             
@@ -726,9 +714,21 @@ class InventorySummaryManager(BaseTableManager):
         """获取库存汇总信息，按商品ID、仓库名和入库单价汇总"""
         try:
             config = self.bitable_config[self.TABLE_NAME]
+            
+            # 构建筛选条件
+            filter_conditions = []
+            if product_id:
+                filter_conditions.append(f'CurrentValue.[商品ID] = "{str(product_id).strip()}"')
+            if warehouse:
+                filter_conditions.append(f'CurrentValue.[仓库名] = "{str(warehouse).strip()}"')
+            
+            # 使用AND()函数组合筛选条件
+            filter_expr = f'AND({", ".join(filter_conditions)})' if filter_conditions else None
+            
             data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
             
             if not data or not data.get("items"):

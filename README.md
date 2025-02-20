@@ -24,12 +24,13 @@
 - 创建新组织或加入已有组织（需要管理员权限）
 
 #### 1.2 应用创建
-1. 访问[飞书开放平台](https://open.feishu.cn/)创建应用
-2. 获取 APP_ID 和 APP_SECRET
-3. 开启机器人功能
+1. 访问[飞书开放平台](https://open.feishu.cn/) 
+2. 点击右上角开发者后台 创建企业自建应用
+3. 获取 APP_ID 和 APP_SECRET
+4. 开启机器人功能
 
 #### 1.3 权限配置
-权限配置：
+权限配置：（可批量导入）
 ```json
 {
   "scopes": {
@@ -64,11 +65,12 @@
 ```
 
 #### 1.4 事件订阅
-1. 配置 Webhook URL
-https://open.feishu.cn/api-explorer/loading 
-或者运行 message_store_bot.py 后获取  使用长链接接收事件
-2. 设置验证 token 和加密 key
+1. 加密策略中设置 Verification Token 和 Encrypt Key
+2. 配置定向长链接
+这里需要先发一个版本 然后执行一下程序 获取长链接
+python环境运行 message_store_bot.py 或 run.py 均可
 3. 订阅以下事件：
+（第一次运行因为没有配置长链接，可能无法订阅可以先跳过，后续配置后，执行程序自动配置好长链接后，再添加）
    - im.message.receive_v1
    - application.bot.menu_v6
 
@@ -137,12 +139,13 @@ FEISHU_APP_SECRET=BZYg***********************pjGG
 FEISHU_VERIFICATION_TOKEN=eCBE********************Wgd4
 FEISHU_ENCRYPT_KEY=cMt1******************6voTyf
 
-# 飞书表格配置
-FEISHU_SHEET_TOKEN=GYw9s*************6cKgnYn5e
-WAREHOUSE_SHEET_ID=ad8f**
-PRODUCT_SHEET_ID=8Fis**
-CATEGORY_SHEET_ID=tt7Q**
-INVENTORY_SHEET_ID=aX0S**
+# 飞书多维表格配置
+FEISHU_BITABLE_APP_TOKEN=MiPB*****y0enMc
+WAREHOUSE_BITABLE_ID=tblY0*****dvUN
+PRODUCT_BITABLE_ID=tblVf*****dgKP
+INVENTORY_SUMMARY_BITABLE_ID=tblOg*****W00C
+INBOUND_BITABLE_ID=tblr6*****XO08
+OUTBOUND_BITABLE_ID=tblWj*****Qvu3
 
 # Deepseek 配置
 DEEPSEEK_API_KEY=sk-6d0*********************004a
