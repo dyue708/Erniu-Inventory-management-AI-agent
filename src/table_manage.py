@@ -453,22 +453,18 @@ class OutboundManager(BaseTableManager):
         """获取指定出库单号的所有出库记录"""
         try:
             config = self.bitable_config[self.TABLE_NAME]
+            filter_expr = f'CurrentValue.[出库单号] = "{outbound_id}"'  # 单个条件不需要AND()
+            
             data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
             
             if not data or not data.get("items"):
                 return []
             
-            # 筛选指定出库单号的记录
-            outbound_records = []
-            for item in data["items"]:
-                fields = item.get("fields", {})
-                if fields.get("出库单号") == outbound_id:
-                    outbound_records.append(item)
-                
-            return outbound_records
+            return data["items"]
         
         except Exception as e:
             logger.error(f"获取出库明细失败: {e}", exc_info=True)
@@ -636,26 +632,27 @@ class InventorySummaryManager(BaseTableManager):
         try:
             config = self.bitable_config[self.TABLE_NAME]
             
-            # 查找该商品在指定仓库的所有库存记录
+            # 使用AND()函数组合筛选条件
+            filter_expr = (
+                f'AND(CurrentValue.[商品ID] = "{outbound_data["商品ID"]}", '
+                f'CurrentValue.[仓库名] = "{outbound_data["仓库名"]}", '
+                f'CurrentValue.[当前库存] > 0)'
+            )
+            
             existing_data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
 
             if not existing_data or not existing_data.get("items"):
                 raise Exception("未找到库存记录")
 
-            # 筛选符合条件的记录并按入库单价降序排序
-            matching_records = []
-            for item in existing_data["items"]:
-                fields = item["fields"]
-                if (fields.get("商品ID") == outbound_data['商品ID'] and
-                    fields.get("仓库名") == outbound_data['仓库名'] and
-                    float(fields.get("当前库存", 0)) > 0):
-                    matching_records.append({
-                        "record_id": item["record_id"],
-                        "fields": fields
-                    })
+            # 转换记录格式并按入库单价降序排序
+            matching_records = [{
+                "record_id": item["record_id"],
+                "fields": item["fields"]
+            } for item in existing_data["items"]]
 
             if not matching_records:
                 raise Exception("没有足够的库存")
@@ -667,8 +664,8 @@ class InventorySummaryManager(BaseTableManager):
             )
 
             # 计算需要出库的数量
-            remaining_qty = float(outbound_data['出库数量'])  # 修改这里：使用出库数量
-            current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
+            remaining_qty = float(outbound_data['出库数量'])
+            current_time = int(datetime.now().timestamp() * 1000)
 
             outbound_details = []
             
@@ -726,9 +723,21 @@ class InventorySummaryManager(BaseTableManager):
         """获取库存汇总信息，按商品ID、仓库名和入库单价汇总"""
         try:
             config = self.bitable_config[self.TABLE_NAME]
+            
+            # 构建筛选条件
+            filter_conditions = []
+            if product_id:
+                filter_conditions.append(f'CurrentValue.[商品ID] = "{str(product_id).strip()}"')
+            if warehouse:
+                filter_conditions.append(f'CurrentValue.[仓库名] = "{str(warehouse).strip()}"')
+            
+            # 使用AND()函数组合筛选条件
+            filter_expr = f'AND({", ".join(filter_conditions)})' if filter_conditions else None
+            
             data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
             
             if not data or not data.get("items"):

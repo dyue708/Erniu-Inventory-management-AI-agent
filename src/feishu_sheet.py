@@ -117,7 +117,7 @@ class FeishuSheet:
     
         self._make_request("POST", url, headers, payload)
 
-    def read_bitable(self, app_token: str, table_id: str, page_size: int = 100, page_token: str = None) -> Dict:
+    def read_bitable(self, app_token: str, table_id: str, page_size: int = 100, page_token: str = None, filter_expr: str = None) -> Dict:
         """读取多维表格数据
         
         Args:
@@ -125,6 +125,7 @@ class FeishuSheet:
             table_id: 表格 ID
             page_size: 每页记录数，默认100
             page_token: 分页标记，默认None
+            filter_expr: 筛选表达式，默认None。例如：'CurrentValue.[姓名] = "张三"'
             
         Returns:
             Dict: 包含表格数据和元信息的字典
@@ -140,8 +141,10 @@ class FeishuSheet:
         }
         if page_token:
             params["page_token"] = page_token
+        if filter_expr:
+            params["filter"] = filter_expr
             
-        data = self._make_request("GET", url, headers, params)
+        data = self._make_request("GET", url, headers, params=params)
         return data.get("data", {})
 
     def write_bitable(self, app_token: str, table_id: str, records: List[Dict]) -> Dict:
