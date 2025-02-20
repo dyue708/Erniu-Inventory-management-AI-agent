@@ -532,47 +532,38 @@ class InventorySummaryManager(BaseTableManager):
             # 打印调试信息
             print(f"更新库存汇总，入库数据: {inbound_data}")
             
-            # 查找现有记录
+            # 使用筛选条件查找匹配记录
+            price = float(inbound_data['入库单价'])
+            filter_expr = (
+                f'AND(CurrentValue.[商品ID] = "{inbound_data["商品ID"]}", '
+                f'CurrentValue.[仓库名] = "{inbound_data["仓库名"]}", '
+                f'ABS(CurrentValue.[入库单价] - {price}) < 0.01)'
+            )
+            
             existing_data = self.sheet_client.read_bitable(
                 app_token=config["app_token"],
-                table_id=config["table_id"]
+                table_id=config["table_id"],
+                filter_expr=filter_expr
             )
 
-            # 修改这里：使用入库单价和入库数量字段
-            query_key = (
-                inbound_data['商品ID'],
-                inbound_data['仓库名'],
-                float(inbound_data['入库单价'])  # 使用入库单价字段
-            )
-
-            # 查找匹配记录
-            matching_record = None
-            record_id = None
-            
-            if existing_data and existing_data.get("items"):
-                for item in existing_data["items"]:
-                    fields = item["fields"]
-                    if (fields.get("商品ID") == query_key[0] and
-                        fields.get("仓库名") == query_key[1] and
-                        abs(float(fields.get("入库单价", 0)) - query_key[2]) < 0.01):  # 使用近似相等比较浮点数
-                        matching_record = fields
-                        record_id = item["record_id"]
-                        break
-
-            current_time = int(datetime.now().timestamp() * 1000)  # 使用毫秒级时间戳
-            quantity = float(inbound_data['入库数量'])  # 使用入库数量字段
-            price = float(inbound_data['入库单价'])    # 使用入库单价字段
+            current_time = int(datetime.now().timestamp() * 1000)
+            quantity = float(inbound_data['入库数量'])
             total_price = quantity * price
 
             # 打印调试信息
             print(f"处理数据: 数量={quantity}, 单价={price}, 总价={total_price}")
-            print(f"匹配记录: {matching_record}")
 
-            if matching_record:
+            if existing_data and existing_data.get("items"):
                 # 更新现有记录
-                new_inbound_qty = float(matching_record.get('累计入库数量', 0)) + quantity
-                new_current_qty = float(matching_record.get('当前库存', 0)) + quantity
-                new_inbound_total = float(matching_record.get('入库总价', 0)) + total_price
+                item = existing_data["items"][0]  # 由于筛选条件精确，应该只有一条记录
+                fields = item["fields"]
+                record_id = item["record_id"]
+                
+                print(f"匹配记录: {fields}")
+
+                new_inbound_qty = float(fields.get('累计入库数量', 0)) + quantity
+                new_current_qty = float(fields.get('当前库存', 0)) + quantity
+                new_inbound_total = float(fields.get('入库总价', 0)) + total_price
 
                 update_fields = {
                     "累计入库数量": new_inbound_qty,
