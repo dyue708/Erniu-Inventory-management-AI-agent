@@ -84,9 +84,9 @@ python环境运行 message_store_bot.py 或 run.py 均可
 https://ccn1hpzj4iz4.feishu.cn/base/DyAYb1D2RaYcbQsjdsdcZOEOnad?table=tblZiGbWquMGu3jB&view=vewHk4ASHw
 创建多维表格后会获取表格链接，从链接中获取 app_token 以及 table_id ，后续在配置文件中需要使用
 > 📝 **表格链接说明**  
-> 示例链接：https://example.feishu.cn/base/DyAYb1D2Raxxxxx/table/tblxxxxxxxxxxxxxx
-> - FEISHU_BITABLE_APP_TOKEN = `DyAYb1D2Raxxxxx` 
-> - BITABLE_ID = `tblxxxxxxxxxxxxxx` 
+> 示例链接：https://example.feishu.cn/base/MiPBbrxxxxxxxxxxxxxxx?table=tblOxxxxxxxxxxxxxx
+> - FEISHU_BITABLE_APP_TOKEN = `MiPBbrxxxxxxxxxxxxxxx` 
+> - BITABLE_ID = `tblOxxxxxxxxxxxxxx` 
 
 #### 1.6 添加应用到表格
 1. 打开飞书多维表格

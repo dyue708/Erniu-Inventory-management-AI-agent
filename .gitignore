@@ -1,9 +1,8 @@
 venv/
 .venv/
-env/
-.env/
 .env*
 !.env.example
+.env/
 myenv/
 myenv
 # 忽略所有 Python 字节码缓存
