@@ -117,13 +117,13 @@ class FeishuSheet:
     
         self._make_request("POST", url, headers, payload)
 
-    def read_bitable(self, app_token: str, table_id: str, page_size: int = 100, page_token: str = None, filter_expr: str = None) -> Dict:
+    def read_bitable(self, app_token: str, table_id: str, page_size: int = 200, page_token: str = None, filter_expr: str = None) -> Dict:
         """读取多维表格数据
         
         Args:
             app_token: 多维表格的应用 token
             table_id: 表格 ID
-            page_size: 每页记录数，默认100
+            page_size: 每页记录数，默认200
             page_token: 分页标记，默认None
             filter_expr: 筛选表达式，默认None。例如：'CurrentValue.[姓名] = "张三"'
             
