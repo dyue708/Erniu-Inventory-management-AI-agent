@@ -1,7 +1,23 @@
+import os
+import sys
+
+# 添加当前目录到Python路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+# 添加src目录到Python路径
+src_dir = os.path.join(current_dir, 'src')
+if src_dir not in sys.path:
+    sys.path.insert(0, src_dir)
+
+# 设置工作目录
+os.chdir(current_dir)
+
 import logging
-from config import FEISHU_CONFIG
-from feishu_sheet import FeishuSheet
-from table_manage import InboundManager, OutboundManager, InventorySummaryManager
+from src.config import FEISHU_CONFIG
+from src.feishu_sheet import FeishuSheet
+from src.table_manage import InboundManager, OutboundManager, InventorySummaryManager
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
