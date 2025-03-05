@@ -47,7 +47,7 @@ def import_initial_inventory(csv_file_path):
         # 准备入库数据
         inbound_data_list = []
         
-        # 使用固定的操作者ID
+        # 使用固定的操作者ID 这里使用调试过程中当前项目内有效的真实操作者ID替换
         operator_id = "ou_97a9b0e1496c1b504db73f460d7466bc"
         
         # 遍历CSV中的每一行
@@ -70,6 +70,8 @@ def import_initial_inventory(csv_file_path):
             express_phone = row.get('快递手机号', '')
             express_phone = str(express_phone) if not pd.isna(express_phone) else ''
             
+            warehouse_remark = row.get('仓库备注', '')
+            warehouse_remark = str(warehouse_remark) if not pd.isna(warehouse_remark) else ''
             # 构建入库记录，确保数值字段是有效的JSON数值
             inbound_record = {
                 "fields": {
@@ -85,7 +87,7 @@ def import_initial_inventory(csv_file_path):
                     "仓库地址": row['仓库地址'],
                     "快递单号": express_no,
                     "快递手机号": express_phone,
-                    "仓库备注": "",
+                    "仓库备注": warehouse_remark,
                     "操作时间": int(datetime.now().timestamp() * 1000),  # 使用当前时间
                     "操作者ID": [{"id": operator_id}]  # 使用正确的格式：列表中包含带有id键的字典
                 }
