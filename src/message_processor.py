@@ -487,6 +487,12 @@ class MessageProcessor:
                                                             },
                                                             {
                                                                 "tag": "markdown",
+                                                                "content": f"👤 **客户：** {form_data.get('customer', '')}\n\n",
+                                                                "text_align": "left",
+                                                                "text_size": "normal_v2"
+                                                            },
+                                                            {
+                                                                "tag": "markdown",
                                                                 "content": "📦 **出库明细：**\n",
                                                                 "text_align": "left",
                                                                 "text_size": "normal_v2"
@@ -509,7 +515,21 @@ class MessageProcessor:
                                                     "text_size": "normal_v2"
                                                 })
 
-                                                # 更新卡片
+                                                # 添加快递信息（如果存在）
+                                                tracking_info = []
+                                                if form_data.get('tracking'):
+                                                    tracking_info.append(f"📬 **快递单号：** {form_data['tracking']}")
+                                                if form_data.get('phone'):
+                                                    tracking_info.append(f"📱 **收件手机：** {form_data['phone']}")
+
+                                                if tracking_info:
+                                                    success_content["body"]["elements"].append({
+                                                        "tag": "markdown",
+                                                        "content": "\n" + "\n".join(tracking_info) + "\n",
+                                                        "text_align": "left",
+                                                        "text_size": "normal_v2"
+                                                    }) 
+                                                                                                   # 更新卡片
                                                 request = PatchMessageRequest.builder() \
                                                     .message_id(message_id) \
                                                     .request_body(PatchMessageRequestBody.builder()
@@ -653,6 +673,12 @@ class MessageProcessor:
                                                             {
                                                                 "tag": "markdown",
                                                                 "content": f":OK: **入库单 {inbound_id} 处理成功**\n\n",
+                                                                "text_align": "left",
+                                                                "text_size": "normal_v2"
+                                                            },
+                                                            {
+                                                                "tag": "markdown",
+                                                                "content": f"👤 **供应商：** {form_data.get('supplier', '')}\n\n",
                                                                 "text_align": "left",
                                                                 "text_size": "normal_v2"
                                                             },
@@ -931,6 +957,7 @@ class MessageProcessor:
                                     "width": "default",
                                     "initial_date": current_date,
                                     "name": "inbound_date",
+                                    "required": True,
                                     "margin": "0px 0px 0px 0px"
                                 }
                             ],
@@ -952,6 +979,7 @@ class MessageProcessor:
                                     "options": warehouse_options,
                                     "type": "default",
                                     "width": "default",
+                                    "required": True,
                                     "name": "warehouse",
                                     "margin": "0px 0px 0px 0px"
                                 }
@@ -986,6 +1014,7 @@ class MessageProcessor:
                     "default_value": "",
                     "width": "default",
                     "name": "supplier",
+                    "required": True,
                     "margin": "0px 0px 0px 0px"
                 },
                 {"tag": "hr", "margin": "0px 0px 0px 0px"},
@@ -1327,6 +1356,7 @@ class MessageProcessor:
                                     },
                                     "width": "default",
                                     "initial_date": current_date,
+                                    "required": True,
                                     "name": "outbound_date",
                                     "margin": "0px 0px 0px 0px"
                                 }
@@ -1349,6 +1379,7 @@ class MessageProcessor:
                                     "options": warehouse_options,
                                     "type": "default",
                                     "width": "default",
+                                    "required": True,
                                     "name": "warehouse",
                                     "margin": "0px 0px 0px 0px"
                                 }
@@ -1383,6 +1414,7 @@ class MessageProcessor:
                     "default_value": "",
                     "width": "default",
                     "name": "customer",
+                    "required": True,
                     "margin": "0px 0px 0px 0px"
                 },
                 {"tag": "hr", "margin": "0px 0px 0px 0px"},
