@@ -36,7 +36,7 @@ class DeepSeekChat:
         self.products = self._get_products()
         
         # 修改基础系统提示词
-        self.system_prompt = """你是一个出入库管理助手。你需要帮助收集完整的出入库信息，并以JSON格式返回。
+        self.system_prompt = """你是一个出入库管理助手。你需要帮助收集完整的出入库信息，或查询库存信息，并以JSON格式返回。
 
 每次对话你都需要：
 1. 分析用户输入，提取相关信息
@@ -48,19 +48,20 @@ class DeepSeekChat:
 你需要从用户的描述中判断是入库还是出库操作：
 - 入库相关词语：进货、入库、到货、进仓、收货、采购到货等
 - 出库相关词语：出货、出库、发货、提货、销售出库、提货等
+- 查询库存相关词语：库存、库存查询、还有多少、剩余多少、有多少个、库存情况等
 
 必要的信息字段包括：
 [
     {
-        "操作类型": "入库或出库",
+        "操作类型": "入库或出库或查询库存",
         "出入库日期": "操作日期（YYYY-MM-DD格式，默认今天，不需要额外询问）",
         "商品ID": "商品ID（根据商品名称自动匹配）",
         "商品名称": "商品名称",
-        "入库数量": 数字类型的数量（入库时使用）,
-        "出库数量": 数字类型的数量（出库时使用）,
-        "入库单价": 数字类型的单价（入库时使用）,
-        "出库单价": 数字类型的单价（出库时使用）,
-        "仓库名": "仓库名称",
+        "入库数量": "数字类型的数量（入库时使用）",
+        "出库数量": "数字类型的数量（出库时使用）",
+        "入库单价": "数字类型的单价（入库时使用）",
+        "出库单价": "数字类型的单价（出库时使用）",
+        "仓库名": "仓库名称（出入库时必填，查询库存时选填）",
         "仓库备注": "根据仓库名自动匹配",
         "仓库地址": "根据仓库名自动匹配",
         "供应商": "入库时的供应商名称（仅入库时需要）",
@@ -70,7 +71,17 @@ class DeepSeekChat:
     }
 ]
 
-注意事项：
+查询库存注意事项：
+1. 对于查询库存操作：
+   - 只要有商品名称就可以直接查询，不需要询问仓库信息
+   - 如果用户主动指定仓库，则查询指定仓库的库存
+   - 如果未指定仓库，则查询所有仓库的库存
+   - 必填字段只有：操作类型、商品ID、商品名称
+   - 不要生成或猜测任何库存数量，只需要确认商品是否在系统中存在后,生成查询指令的JSON。
+2. 对于入库和出库操作，按出入库规则处理
+3. 商品名称必须与商品列表中的名称完全匹配，或使用商品备注中的别称
+
+出入库注意事项：
 1. 每次对话都需要检查已有信息，将新信息与已有信息合并
 2. 数量和单价必须是纯数字，不能包含单位
 3. 日期必须是 YYYY-MM-DD 格式
@@ -78,12 +89,11 @@ class DeepSeekChat:
 5. 根据操作类型使用对应的字段：
    - 入库时使用：入库数量、入库单价、供应商（客户字段留空）
    - 出库时使用：出库数量、出库单价、客户（供应商字段留空）
-6. 商品名称必须与商品列表中的名称完全匹配
+6. 商品名称必须与商品列表中的名称完全匹配，或使用商品备注中的别称
 7. 仓库名称必须与仓库列表中的名称完全匹配
 8. 对于出库操作，需要检查库存是否充足
 9. 入库时,如果提到从XXX采购,则代表供应商就是XXX。
 10. 出库时,如果写道发给XX或者给XX,则XX是客户。
-
 
 
 请按以下格式返回数据：
@@ -304,37 +314,42 @@ class DeepSeekChat:
                             "timestamp": current_time
                         })
                         
-                        # 修改检查逻辑，只在找到完整的 JSON 时才尝试写入
+                        # 在处理 JSON 数据时添加查询库存的处理
                         if "<JSON>" in assistant_message and "</JSON>" in assistant_message:
                             json_match = re.search(r'<JSON>(.*?)</JSON>', assistant_message, re.DOTALL)
                             if json_match:
                                 json_str = json_match.group(1).strip()
-                                try:
-                                    data = json.loads(json_str)
-                                    # 验证数据是否完整
+                                data = json.loads(json_str)
+                                
+                                # 处理查询库存请求
+                                if isinstance(data, list) and data[0].get('操作类型') == '查询库存':
                                     if self._validate_inventory_data(data):
-                                        # 尝试写入表格
-                                        try:
-                                            self._write_inventory_record(assistant_message)
-                                            # 写入成功后的处理
-                                            success_message = "✔数据已成功写入"
-                                            if data[0]['操作类型'] == '入库':
-                                                success_message += "入库表。"
-                                            else:
-                                                success_message += "出库表。"
-                                            assistant_message += f"\n\n{success_message}"
-                                            self.clear_session(user_id)
-                                        except Exception as e:
-                                            # 写入失败时，修改 AI 的回复
-                                            error_msg = f"\n\n写入失败: {str(e)}\n请重新提交。"
-                                            assistant_message += error_msg
-                                except Exception as e:
-                                    logger.error(f"处理 JSON 数据时出错: {str(e)}")
-                                    assistant_message += f"\n\n数据处理失败: {str(e)}\n请检查数据格式是否正确。"
-
-                        # 正常的历史记录管理
-                        if len(self.conversations[user_id]) > self.max_history * 2:
-                            self.conversations[user_id] = self.conversations[user_id][-self.max_history * 2:]
+                                        stock_info = self._get_stock_info(data[0]['商品ID'])
+                                        # 查询完成后清空会话历史
+                                        self.clear_session(user_id)
+                                        return f"{assistant_message}\n\n{stock_info}"
+                                
+                                # 验证数据是否完整
+                                if self._validate_inventory_data(data):
+                                    # 尝试写入表格
+                                    try:
+                                        self._write_inventory_record(assistant_message)
+                                        # 写入成功后的处理
+                                        success_message = "✔数据已成功写入"
+                                        if data[0]['操作类型'] == '入库':
+                                            success_message += "入库表。"
+                                        else:
+                                            success_message += "出库表。"
+                                        assistant_message += f"\n\n{success_message}"
+                                        self.clear_session(user_id)
+                                    except Exception as e:
+                                        # 写入失败时，修改 AI 的回复
+                                        error_msg = f"\n\n写入失败: {str(e)}\n请重新提交。"
+                                        assistant_message += error_msg
+                        else:
+                            # 正常的历史记录管理
+                            if len(self.conversations[user_id]) > self.max_history * 2:
+                                self.conversations[user_id] = self.conversations[user_id][-self.max_history * 2:]
                         
                         return assistant_message
                     else:
@@ -491,6 +506,22 @@ class DeepSeekChat:
             if isinstance(data, list):
                 return all(self._validate_inventory_data(item) for item in data)
             
+            # 添加对查询库存操作的验证
+            if data.get('操作类型') == '查询库存':
+                required_fields = {
+                    '商品ID': str,
+                    '商品名称': str
+                }
+                # 验证必要字段
+                for field, field_type in required_fields.items():
+                    if field not in data:
+                        return False
+                    if not isinstance(data[field], field_type):
+                        return False
+                    if isinstance(data[field], str) and not data[field].strip():
+                        return False
+                return True
+            
             base_fields = {
                 '出入库日期': str,
                 '商品ID': str,
@@ -586,6 +617,45 @@ class DeepSeekChat:
             
         except Exception:
             return False, 0
+
+    def _get_stock_info(self, product_id: str) -> str:
+        """获取并格式化库存信息"""
+        try:
+            stock_df = self.inventory_manager.get_stock_summary(product_id=product_id)
+            
+            if stock_df.empty:
+                return "该商品暂无库存记录。"
+
+            # 获取商品名称
+            product_name = self.products[
+                self.products['商品ID'] == product_id
+            ]['商品名称'].iloc[0]
+
+            # 计算总库存
+            total_stock = stock_df['当前库存'].sum()
+            
+            # 格式化每个仓库的库存信息
+            warehouse_details = []
+            for _, row in stock_df.iterrows():
+                if row['当前库存'] > 0:  # 只显示有库存的仓库
+                    warehouse_details.append(
+                        f"- {row['仓库名']}: {row['当前库存']}"
+                    )
+
+            # 构建响应消息
+            response = f"\n库存查询结果：\n"
+            response += f"商品 {product_name} 的库存情况：\n"
+            response += f"总库存：{total_stock}\n"
+            if warehouse_details:
+                response += "\n各仓库库存明细：\n" + "\n".join(warehouse_details)
+            else:
+                response += "\n（所有仓库库存为零）"
+
+            return response
+
+        except Exception as e:
+            logger.error(f"获取库存信息时发生错误: {str(e)}")
+            return f"获取库存信息时发生错误: {str(e)}"
 
 
 # 使用示例
