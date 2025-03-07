@@ -324,10 +324,16 @@ class DeepSeekChat:
                                 # 处理查询库存请求
                                 if isinstance(data, list) and data[0].get('操作类型') == '查询库存':
                                     if self._validate_inventory_data(data):
-                                        stock_info = self._get_stock_info(data[0]['商品ID'])
+                                        # 查询所有商品的库存
+                                        stock_info_list = []
+                                        for item in data:
+                                            stock_info = self._get_stock_info(item['商品ID'])
+                                            stock_info_list.append(stock_info)
+                                        
                                         # 查询完成后清空会话历史
                                         self.clear_session(user_id)
-                                        return f"{assistant_message}\n\n{stock_info}"
+                                        # 用两个换行符分隔每个商品的库存信息
+                                        return f"{assistant_message}\n\n" + "\n\n".join(stock_info_list)
                                 
                                 # 验证数据是否完整
                                 if self._validate_inventory_data(data):
@@ -623,13 +629,13 @@ class DeepSeekChat:
         try:
             stock_df = self.inventory_manager.get_stock_summary(product_id=product_id)
             
-            if stock_df.empty:
-                return "该商品暂无库存记录。"
-
             # 获取商品名称
             product_name = self.products[
                 self.products['商品ID'] == product_id
             ]['商品名称'].iloc[0]
+
+            if stock_df.empty:
+                return f"商品 {product_name} 暂无库存记录。"
 
             # 计算总库存
             total_stock = stock_df['当前库存'].sum()
