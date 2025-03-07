@@ -633,6 +633,9 @@ class DeepSeekChat:
             product_name = self.products[
                 self.products['商品ID'] == product_id
             ]['商品名称'].iloc[0]
+            unit = self.products[
+                self.products['商品ID'] == product_id
+            ]['商品单位'].iloc[0]
 
             if stock_df.empty:
                 return f"商品 {product_name} 暂无库存记录。"
@@ -645,13 +648,13 @@ class DeepSeekChat:
             for _, row in stock_df.iterrows():
                 if row['当前库存'] > 0:  # 只显示有库存的仓库
                     warehouse_details.append(
-                        f"- {row['仓库名']}: {row['当前库存']}"
+                        f"- {row['仓库名']}: {row['当前库存']} {unit}"
                     )
 
             # 构建响应消息
             response = f"\n库存查询结果：\n"
-            response += f"商品 {product_name} 的库存情况：\n"
-            response += f"总库存：{total_stock}\n"
+            response += f"{product_name} 的库存情况：\n"
+            response += f"总库存：{total_stock} {unit}\n "
             if warehouse_details:
                 response += "\n各仓库库存明细：\n" + "\n".join(warehouse_details)
             else:
