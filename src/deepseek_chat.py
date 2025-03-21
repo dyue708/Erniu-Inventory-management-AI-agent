@@ -300,6 +300,7 @@ class DeepSeekChat:
                     if response.status_code == 200:
                         result = response.json()
                         assistant_message = result["choices"][0]["message"]["content"]
+                        logger.info(f"AI 回复: {assistant_message}")
                         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
                         # 更新会话历史
@@ -652,11 +653,10 @@ class DeepSeekChat:
                     )
 
             # 构建响应消息
-            response = f"\n库存查询结果：\n"
-            response += f"{product_name} 的库存情况：\n"
+            response = f"{product_name} 的库存情况：\n"
             response += f"总库存：{total_stock} {unit}\n "
             if warehouse_details:
-                response += "\n各仓库库存明细：\n" + "\n".join(warehouse_details)
+                response += "\n其中：\n" + "\n".join(warehouse_details)
             else:
                 response += "\n（所有仓库库存为零）"
 
