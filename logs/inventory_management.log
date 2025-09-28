@@ -1,0 +1,388 @@
+2025-09-28 15:06:57,123 - src.main_app - INFO - === Inventory Management System Starting ===
+2025-09-28 15:06:57,124 - src.main_app - INFO - Loading configuration...
+2025-09-28 15:06:57,126 - config_validator - INFO - Loaded environment variables from D:\git\erniu\inventory_management\.env
+2025-09-28 15:06:57,126 - config_validator - INFO - Configuration group 'feishu' validated successfully
+2025-09-28 15:06:57,126 - config_validator - INFO - Configuration group 'bitable' validated successfully
+2025-09-28 15:06:57,128 - config_validator - INFO - Configuration group 'deepseek' validated successfully
+2025-09-28 15:06:57,129 - config_validator - INFO - Configuration group 'app' validated successfully
+2025-09-28 15:06:57,130 - config_validator - INFO - All configuration validated successfully
+2025-09-28 15:06:57,130 - src.main_app - INFO - Configuration loaded and validated successfully
+2025-09-28 15:06:57,131 - src.main_app - INFO - Initializing message queue in messages...
+2025-09-28 15:06:57,132 - message_queue - INFO - Loaded 0 pending messages
+2025-09-28 15:06:57,132 - src.main_app - INFO - Initializing health monitor on port 8080...
+2025-09-28 15:06:57,132 - health_monitor - INFO - Registered health check: system
+2025-09-28 15:06:57,133 - health_monitor - INFO - Registered health check: message_queue
+2025-09-28 15:06:57,133 - src.main_app - INFO - Application initialized successfully
+2025-09-28 15:06:57,133 - src.main_app - INFO - Registered service: message_store
+2025-09-28 15:06:57,134 - src.main_app - INFO - Registered service: message_processor
+2025-09-28 15:06:57,134 - src.main_app - INFO - Registered service: health_monitor
+2025-09-28 15:06:57,134 - src.main_app - INFO - Registered service: health_web_server
+2025-09-28 15:06:57,135 - src.main_app - INFO - Registered service: service_monitor
+2025-09-28 15:06:57,135 - src.main_app - INFO - All services registered successfully
+2025-09-28 15:06:57,135 - src.main_app - INFO - Starting Inventory Management Application...
+2025-09-28 15:06:57,136 - src.main_app - INFO - Starting all services...
+2025-09-28 15:06:57,136 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:06:57,136 - src.main_app - INFO - Started service: message_processor
+2025-09-28 15:06:57,137 - src.main_app - INFO - Started service: health_monitor
+2025-09-28 15:06:57,137 - src.main_app - INFO - Started service: health_web_server
+2025-09-28 15:06:57,138 - src.main_app - INFO - Started service: service_monitor
+2025-09-28 15:06:57,138 - src.main_app - INFO - Started 5 services
+2025-09-28 15:06:57,138 - src.main_app - INFO - Application started successfully
+2025-09-28 15:06:57,139 - src.main_app - INFO - Press Ctrl+C to stop the application
+2025-09-28 15:06:57,139 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:06:57,140 - src.main_app - INFO - Message store service started
+2025-09-28 15:06:57,140 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:06:57,141 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:06:57,149 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:06:57,153 - message_processor - INFO - MessageProcessor initialized with app_id: cli_a7fe5e4e57b8500c
+2025-09-28 15:06:57,614 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4430, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:06:58,365 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fld1BT7hO4', 'field_name': '仓库名', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldNrZUaxt', 'field_name': '仓库地址', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldHOuUlSv', 'field_name': '仓库备注', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}], 'page_token': 'fldHOuUlSv', 'total': 3}, 'msg': 'success'}
+2025-09-28 15:06:59,377 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'fields': {'仓库名': '1号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vmiK35eO', 'record_id': 'recuz4vmiK35eO'}, {'fields': {'仓库名': '2号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vEieIkRT', 'record_id': 'recuz4vEieIkRT'}, {'fields': {'仓库名': '3号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vH2RnDwv', 'record_id': 'recuz4vH2RnDwv'}], 'total': 3}, 'msg': 'success'}
+2025-09-28 15:06:59,867 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4428, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:07:00,705 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'fields': {'商品ID': 'YJ0001', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 350ml ]', '商品备注': '350蓝带', '商品规格': '350ml'}, 'id': 'recuCKXw9Rx537', 'record_id': 'recuCKXw9Rx537'}, {'fields': {'商品ID': 'YJ0002', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 500ml ]', '商品备注': '500蓝带', '商品规格': '500ml'}, 'id': 'recuCKXwswCpp7', 'record_id': 'recuCKXwswCpp7'}, {'fields': {'商品ID': 'YJ0003', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 700ml ]', '商品备注': '700蓝带', '商品规格': '700ml'}, 'id': 'recuCKXyVjEk7A', 'record_id': 'recuCKXyVjEk7A'}, {'fields': {'商品ID': 'YJ0004', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 1000ml ]', '商品备注': '公斤蓝带', '商品规格': '1000ml'}, 'id': 'recuCKXyVjLBzk', 'record_id': 'recuCKXyVjLBzk'}, {'fields': {'商品ID': 'YJ0005', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 350ml ]', '商品备注': '小名仕', '商品规格': '350ml'}, 'id': 'recuCKXyVj8gAq', 'record_id': 'recuCKXyVj8gAq'}, {'fields': {'商品ID': 'YJ0006', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 500ml ]', '商品备注': '500名仕', '商品规格': '500ml'}, 'id': 'recuCKXyVjvA13', 'record_id': 'recuCKXyVjvA13'}, {'fields': {'商品ID': 'YJ0007', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 700ml ]', '商品备注': '700名仕', '商品规格': '700ml'}, 'id': 'recuCKXyVjbAzD', 'record_id': 'recuCKXyVjbAzD'}, {'fields': {'商品ID': 'YJ0008', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 1000ml ]', '商品备注': '公斤名仕', '商品规格': '1000ml'}, 'id': 'recuCKXyVjta3z', 'record_id': 'recuCKXyVjta3z'}, {'fields': {'商品ID': 'YJ0009', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 350ml ]', '商品备注': '小角马', '商品规格': '350ml'}, 'id': 'recuCKXyVj5pKk', 'record_id': 'recuCKXyVj5pKk'}, {'fields': {'商品ID': 'YJ0010', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 500ml ]', '商品备注': '500角', '商品规格': '500ml'}, 'id': 'recuCKXyVj7TZw', 'record_id': 'recuCKXyVj7TZw'}, {'fields': {'商品ID': 'YJ0011', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 500ml｜城市版 ]', '商品备注': '城市角', '商品规格': '500ml｜城市版'}, 'id': 'recuCKXyVjjJv0', 'record_id': 'recuCKXyVjjJv0'}, {'fields': {'商品ID': 'YJ0012', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 700ml ]', '商品备注': '700角', '商品规格': '700ml'}, 'id': 'recuCKXyVjxK1r', 'record_id': 'recuCKXyVjxK1r'}, {'fields': {'商品ID': 'YJ0013', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 1000ml ]', '商品备注': '公斤角', '商品规格': '1000ml'}, 'id': 'recuCKXyVjokBs', 'record_id': 'recuCKXyVjokBs'}, {'fields': {'商品ID': 'YJ0014', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 30ml ]', '商品备注': '30ml人头马', '商品规格': '30ml'}, 'id': 'recuCKXyVj2dSP', 'record_id': 'recuCKXyVj2dSP'}, {'fields': {'商品ID': 'YJ0015', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 200ml ]', '商品备注': '200ml人头马', '商品规格': '200ml'}, 'id': 'recuCKXyVjdLv4', 'record_id': 'recuCKXyVjdLv4'}, {'fields': {'商品ID': 'YJ0016', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 350ml ]', '商品备注': '350ml人头马', '商品规格': '350ml'}, 'id': 'recuCKXyVjEmQH', 'record_id': 'recuCKXyVjEmQH'}, {'fields': {'商品ID': 'YJ0017', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 500ml ]', '商品备注': '500ml人头马', '商品规格': '500ml'}, 'id': 'recuCKXyVjEk1c', 'record_id': 'recuCKXyVjEk1c'}, {'fields': {'商品ID': 'YJ0018', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马xo[ 50ml ]', '商品备注': '小太阳花', '商品规格': '50ml'}, 'id': 'recuCKXyVjPKTf', 'record_id': 'recuCKXyVjPKTf'}, {'fields': {'商品ID': 'YJ0019', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马xo[ 700ml ]', '商品备注': '700人头马xo', '商品规格': '700ml'}, 'id': 'recuCKXyVjmweS', 'record_id': 'recuCKXyVjmweS'}, {'fields': {'商品ID': 'YJ0020', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 700ml ]', '商品备注': '老轩V', '商品规格': '700ml'}, 'id': 'recuCKXyVjSNq4', 'record_id': 'recuCKXyVjSNq4'}, {'fields': {'商品ID': 'YJ0021', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 700ml ｜红色新版 ]', '商品备注': '红轩V', '商品规格': '700ml ｜红色新版'}, 'id': 'recuCKXyVjcC8o', 'record_id': 'recuCKXyVjcC8o'}, {'fields': {'商品ID': 'YJ0022', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 1000ml ]', '商品备注': '公斤轩V', '商品规格': '1000ml'}, 'id': 'recuCKXyVjNI3s', 'record_id': 'recuCKXyVjNI3s'}, {'fields': {'商品ID': 'YJ0023', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗xo[ 700ml ]', '商品备注': '700轩O', '商品规格': '700ml'}, 'id': 'recuCKXyVjN3yS', 'record_id': 'recuCKXyVjN3yS'}, {'fields': {'商品ID': 'BJ0001', '商品分类': '白酒', '商品单位': '支', '商品名称': '五粮液八代[ 500ml｜单支 ]', '商品备注': '普五', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjNfxe', 'record_id': 'recuCKXyVjNfxe'}, {'fields': {'商品ID': 'BJ0002', '商品分类': '白酒', '商品单位': '箱', '商品名称': '五粮液八代[ 500ml*6｜整箱 ]', '商品备注': '五粮液原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjWFqi', 'record_id': 'recuCKXyVjWFqi'}, {'fields': {'商品ID': 'BJ0003', '商品分类': '白酒', '商品单位': '支', '商品名称': '五粮液七代[ 500ml｜单支 ]', '商品备注': '散五粮液七代', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjuCFY', 'record_id': 'recuCKXyVjuCFY'}, {'fields': {'商品ID': 'BJ0004', '商品分类': '白酒', '商品单位': '箱', '商品名称': '五粮液七代[ 500ml*6｜整箱 ]', '商品备注': '五粮液七代原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjgKTy', 'record_id': 'recuCKXyVjgKTy'}, {'fields': {'商品ID': 'BJ0005', '商品分类': '白酒', '商品单位': '支', '商品名称': '国窖1573[ 500ml｜单支 ]', '商品备注': '1573', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjuI0V', 'record_id': 'recuCKXyVjuI0V'}, {'fields': {'商品ID': 'BJ0006', '商品分类': '白酒', '商品单位': '箱', '商品名称': '国窖1573[ 500ml*6｜整箱 ]', '商品备注': '1573原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjhRJ5', 'record_id': 'recuCKXyVjhRJ5'}, {'fields': {'商品ID': 'BJ0007', '商品分类': '白酒', '商品单位': '支', '商品名称': '剑南春[ 500ml｜单支 ]', '商品备注': '剑南春', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjVvzz', 'record_id': 'recuCKXyVjVvzz'}, {'fields': {'商品ID': 'BJ0008', '商品分类': '白酒', '商品单位': '箱', '商品名称': '剑南春[ 500ml*6｜整箱 ]', '商品备注': '剑南春原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVj3Miv', 'record_id': 'recuCKXyVj3Miv'}, {'fields': {'商品ID': 'BJ0009', '商品分类': '白酒', '商品单位': '支', '商品名称': '43度茅台[ 500ml｜单支 ]', '商品备注': '散43', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjdo24', 'record_id': 'recuCKXyVjdo24'}, {'fields': {'商品ID': 'BJ0010', '商品分类': '白酒', '商品单位': '箱', '商品名称': '43度茅台[ 500ml*6｜整箱 ]', '商品备注': '43原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjoLik', 'record_id': 'recuCKXyVjoLik'}, {'fields': {'商品ID': 'BJ0011', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 100ml ]', '商品备注': '100ml茅台', '商品规格': '100ml'}, 'id': 'recuCKXyVjlfSw', 'record_id': 'recuCKXyVjlfSw'}, {'fields': {'商品ID': 'BJ0012', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 200ml ]', '商品备注': '200ml茅台', '商品规格': '200ml'}, 'id': 'recuCKXyVjNICh', 'record_id': 'recuCKXyVjNICh'}, {'fields': {'商品ID': 'BJ0013', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 375ml ]', '商品备注': '375茅台', '商品规格': '375ml'}, 'id': 'recuCKXyVjFhxN', 'record_id': 'recuCKXyVjFhxN'}, {'fields': {'商品ID': 'BJ0014', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 500ml ]', '商品备注': '散飞', '商品规格': '500ml'}, 'id': 'recuCKXyVjdPvm', 'record_id': 'recuCKXyVjdPvm'}, {'fields': {'商品ID': 'BJ0015', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 1000ml ]', '商品备注': '公斤茅台', '商品规格': '1000ml'}, 'id': 'recuCKXyVj182X', 'record_id': 'recuCKXyVj182X'}, {'fields': {'商品ID': 'BJ0016', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜年份酒（2019-2022） ]', '商品备注': '茅台年份酒', '商品规格': '500ml｜年份酒（2019-2022）'}, 'id': 'recuCKXyVjSFc7', 'record_id': 'recuCKXyVjSFc7'}, {'fields': {'商品ID': 'BJ0017', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜精品系列 ]', '商品备注': '精品', '商品规格': '500ml｜精品系列'}, 'id': 'recuCKXyVj2o47', 'record_id': 'recuCKXyVj2o47'}, {'fields': {'商品ID': 'BJ0018', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 100ml｜节气酒 ]', '商品备注': '小节气', '商品规格': '100ml｜节气酒'}, 'id': 'recuCKXyVjZFOi', 'record_id': 'recuCKXyVjZFOi'}, {'fields': {'商品ID': 'BJ0019', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜节气酒 ]', '商品备注': '节气酒', '商品规格': '500ml｜节气酒'}, 'id': 'recuCKXyVjJeNR', 'record_id': 'recuCKXyVjJeNR'}, {'fields': {'商品ID': 'BJ0020', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜庚子鼠 ]', '商品备注': '鼠茅', '商品规格': '500ml｜生肖｜庚子鼠'}, 'id': 'recuCKXyVjc3xU', 'record_id': 'recuCKXyVjc3xU'}, {'fields': {'商品ID': 'BJ0021', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜辛丑牛 ]', '商品备注': '牛茅', '商品规格': '500ml｜生肖｜辛丑牛'}, 'id': 'recuCKXyVjgKIi', 'record_id': 'recuCKXyVjgKIi'}, {'fields': {'商品ID': 'BJ0022', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜壬寅虎 ]', '商品备注': '虎茅', '商品规格': '500ml｜生肖｜壬寅虎'}, 'id': 'recuCKXyVjuWfk', 'record_id': 'recuCKXyVjuWfk'}, {'fields': {'商品ID': 'BJ0023', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜癸卯兔 ]', '商品备注': '兔茅', '商品规格': '500ml｜生肖｜癸卯兔'}, 'id': 'recuCKXyVjm8yl', 'record_id': 'recuCKXyVjm8yl'}, {'fields': {'商品ID': 'BJ0024', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜甲辰龙 ]', '商品备注': '龙茅', '商品规格': '500ml｜生肖｜甲辰龙'}, 'id': 'recuCKXyVjUlzV', 'record_id': 'recuCKXyVjUlzV'}, {'fields': {'商品ID': 'BJ0025', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜己亥猪 ]', '商品备注': '猪茅', '商品规格': '500ml｜生肖｜己亥猪'}, 'id': 'recuCKXyVjFCca', 'record_id': 'recuCKXyVjFCca'}, {'fields': {'商品ID': 'BJ0026', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜戊戌狗 ]', '商品备注': '狗茅', '商品规格': '500ml｜生肖｜戊戌狗'}, 'id': 'recuCKXyVj8hty', 'record_id': 'recuCKXyVj8hty'}, {'fields': {'商品ID': 'BJ0027', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜丁酉鸡 ]', '商品备注': '鸡茅', '商品规格': '500ml｜生肖｜丁酉鸡'}, 'id': 'recuCKXyVjYhgp', 'record_id': 'recuCKXyVjYhgp'}, {'fields': {'商品ID': 'BJ0028', '商品分类': '白酒', '商品单位': '支', '商品名称': '茅台1935[ 500ml｜单支 ]', '商品备注': '1935', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVj4clY', 'record_id': 'recuCKXyVj4clY'}, {'fields': {'商品ID': 'BJ0029', '商品分类': '白酒', '商品单位': '箱', '商品名称': '茅台1935[ 500ml*6｜整箱 ]', '商品备注': '1935原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjyHv0', 'record_id': 'recuCKXyVjyHv0'}, {'fields': {'商品ID': 'SM0001', '商品分类': '数码', '商品单位': '台', '商品名称': 'airpods二代', '商品规格': '-'}, 'id': 'recuCKXyVj83dw', 'record_id': 'recuCKXyVj83dw'}, {'fields': {'商品ID': 'SM0002', '商品分类': '数码', '商品单位': '台', '商品名称': 'ipad2025版[ 256G｜银色 ]', '商品规格': '256G｜银色'}, 'id': 'recuCKXyVjpZrI', 'record_id': 'recuCKXyVjpZrI'}, {'fields': {'商品ID': 'SM0003', '商品分类': '数码', '商品单位': '台', '商品名称': 'ipad air[ 256G｜银色 ]', '商品规格': '256G｜银色'}, 'id': 'recuCKXyVjPseQ', 'record_id': 'recuCKXyVjPseQ'}, {'fields': {'商品ID': 'SM0004', '商品分类': '数码', '商品单位': '台', '商品名称': 'iphone16[ 128G｜深空灰 ]', '商品规格': '128G｜深空灰'}, 'id': 'recuCKXyVjKq0j', 'record_id': 'recuCKXyVjKq0j'}, {'fields': {'商品ID': 'NF0001', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿2段[ 400g ]', '商品备注': '小美素2段', '商品规格': '400g'}, 'id': 'recuCKXyVjffl2', 'record_id': 'recuCKXyVjffl2'}, {'fields': {'商品ID': 'NF0002', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿2段[ 800g ]', '商品备注': '美素2段', '商品规格': '800g'}, 'id': 'recuCKXyVjky18', 'record_id': 'recuCKXyVjky18'}, {'fields': {'商品ID': 'NF0003', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿3段[ 800g ]', '商品备注': '美素3段', '商品规格': '800g'}, 'id': 'recuCKXyVjEYiz', 'record_id': 'recuCKXyVjEYiz'}], 'total': 59}, 'msg': 'success'}
+2025-09-28 15:07:01,154 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4426, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:07:01,789 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fldXS7VMAl', 'field_name': '商品名称', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldGuQDKnG', 'field_name': '仓库名', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldEXo039o', 'field_name': '商品ID', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldJjmf5Qt', 'field_name': '当前库存', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldibUl2Es', 'field_name': '入库单价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldjoEnUge', 'field_name': '累计入库数量', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldFyVEgxv', 'field_name': '入库总价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldFtOWmVG', 'field_name': '累计出库数量', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldOBfAabY', 'field_name': '出库总价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldzXmfvxJ', 'field_name': '库存总价', 'is_primary': False, 'property': {'formatter': '0.0', 'formula_expression': 'bitable::$table[tblOgqDaDx4DW00C].$field[fldJjmf5Qt]*bitable::$table[tblOgqDaDx4DW00C].$field[fldibUl2Es]', 'type': {'data_type': 2, 'ui_property': {'formatter': '0.0'}, 'ui_type': 'Number'}}, 'type': 20, 'ui_type': 'Formula'}, {'field_id': 'fldjHtUu0L', 'field_name': '最后出库时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}, {'field_id': 'fldKLBmkze', 'field_name': '最后入库时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}, {'field_id': 'fldz0ofkpR', 'field_name': '最后更新时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}], 'page_token': 'fldz0ofkpR', 'total': 13}, 'msg': 'success'}
+2025-09-28 15:07:02,219 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4425, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:07:02,748 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fld1BT7hO4', 'field_name': '仓库名', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldNrZUaxt', 'field_name': '仓库地址', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldHOuUlSv', 'field_name': '仓库备注', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}], 'page_token': 'fldHOuUlSv', 'total': 3}, 'msg': 'success'}
+2025-09-28 15:07:02,753 - src.main_app - INFO - Message processor service started
+2025-09-28 15:07:02,757 - message_processor - INFO - Starting message processing loop
+2025-09-28 15:07:02,762 - src.main_app - INFO - Health monitor service started
+2025-09-28 15:07:02,763 - health_monitor - INFO - Starting health monitoring
+2025-09-28 15:07:02,765 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:02,768 - health_monitor - INFO - Health monitor web server started on port 8080
+2025-09-28 15:07:02,769 - src.main_app - INFO - Health web server service started
+2025-09-28 15:07:07,772 - src.main_app - WARNING - Restarting service 'message_store' (attempt 1)
+2025-09-28 15:07:07,772 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:07:07,774 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:07:07,774 - src.main_app - INFO - Message store service started
+2025-09-28 15:07:07,775 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:07:07,776 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:07:07,777 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:16,759 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:07:16 +0800] "GET /health HTTP/1.1" 200 1098 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+2025-09-28 15:07:16,833 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:07:16 +0800] "GET /favicon.ico HTTP/1.1" 404 175 "http://localhost:8080/health" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+2025-09-28 15:07:17,764 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:20,476 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:07:20 +0800] "GET /metrics HTTP/1.1" 200 1813 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+2025-09-28 15:07:22,770 - src.main_app - WARNING - Restarting service 'message_store' (attempt 2)
+2025-09-28 15:07:22,771 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:07:22,772 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:07:22,774 - src.main_app - INFO - Message store service started
+2025-09-28 15:07:22,774 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:07:22,775 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:07:22,777 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:25,069 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:07:25 +0800] "GET /history HTTP/1.1" 200 1126 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+2025-09-28 15:07:32,782 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:37,788 - src.main_app - WARNING - Restarting service 'message_store' (attempt 3)
+2025-09-28 15:07:37,790 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:07:37,794 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:07:37,796 - src.main_app - INFO - Message store service started
+2025-09-28 15:07:37,799 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:07:37,801 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:07:37,805 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:42,865 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:07:42 +0800] "GET /health HTTP/1.1" 200 1099 "-" "curl/7.85.0"
+2025-09-28 15:07:47,813 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:52,803 - src.main_app - ERROR - Service 'message_store' exceeded max restart attempts (3)
+2025-09-28 15:07:56,500 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:07:56 +0800] "GET /metrics HTTP/1.1" 200 1810 "-" "curl/7.85.0"
+2025-09-28 15:08:02,829 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:08:07,837 - src.main_app - ERROR - Service 'message_store' exceeded max restart attempts (3)
+2025-09-28 15:09:03,218 - src.main_app - INFO - === Inventory Management System Starting ===
+2025-09-28 15:09:03,219 - src.main_app - INFO - Loading configuration...
+2025-09-28 15:09:03,222 - config_validator - INFO - Loaded environment variables from d:\git\erniu\inventory_management\.env
+2025-09-28 15:09:03,223 - config_validator - INFO - Configuration group 'feishu' validated successfully
+2025-09-28 15:09:03,224 - config_validator - INFO - Configuration group 'bitable' validated successfully
+2025-09-28 15:09:03,224 - config_validator - INFO - Configuration group 'deepseek' validated successfully
+2025-09-28 15:09:03,225 - config_validator - INFO - Configuration group 'app' validated successfully
+2025-09-28 15:09:03,225 - config_validator - INFO - All configuration validated successfully
+2025-09-28 15:09:03,226 - src.main_app - INFO - Configuration loaded and validated successfully
+2025-09-28 15:09:03,226 - src.main_app - INFO - Initializing message queue in messages...
+2025-09-28 15:09:03,227 - message_queue - INFO - Loaded 0 pending messages
+2025-09-28 15:09:03,228 - src.main_app - INFO - Initializing health monitor on port 8080...
+2025-09-28 15:09:03,228 - health_monitor - INFO - Registered health check: system
+2025-09-28 15:09:03,229 - health_monitor - INFO - Registered health check: message_queue
+2025-09-28 15:09:03,229 - src.main_app - INFO - Application initialized successfully
+2025-09-28 15:09:03,230 - src.main_app - INFO - Registered service: message_store
+2025-09-28 15:09:03,230 - src.main_app - INFO - Registered service: message_processor
+2025-09-28 15:09:03,231 - src.main_app - INFO - Registered service: health_monitor
+2025-09-28 15:09:03,231 - src.main_app - INFO - Registered service: health_web_server
+2025-09-28 15:09:03,232 - src.main_app - INFO - Registered service: service_monitor
+2025-09-28 15:09:03,233 - src.main_app - INFO - All services registered successfully
+2025-09-28 15:09:03,233 - src.main_app - INFO - Starting Inventory Management Application...
+2025-09-28 15:09:03,234 - src.main_app - INFO - Starting all services...
+2025-09-28 15:09:03,235 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:09:03,235 - src.main_app - INFO - Started service: message_processor
+2025-09-28 15:09:03,236 - src.main_app - INFO - Started service: health_monitor
+2025-09-28 15:09:03,236 - src.main_app - INFO - Started service: health_web_server
+2025-09-28 15:09:03,237 - src.main_app - INFO - Started service: service_monitor
+2025-09-28 15:09:03,238 - src.main_app - INFO - Started 5 services
+2025-09-28 15:09:03,239 - src.main_app - INFO - Application started successfully
+2025-09-28 15:09:03,240 - src.main_app - INFO - Press Ctrl+C to stop the application
+2025-09-28 15:09:03,241 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:09:03,242 - src.main_app - INFO - Message store service started
+2025-09-28 15:09:03,243 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:03,244 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:03,248 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:03,253 - message_processor - INFO - MessageProcessor initialized with app_id: cli_a7fe5e4e57b8500c
+2025-09-28 15:09:03,708 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4304, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:09:04,349 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fld1BT7hO4', 'field_name': '仓库名', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldNrZUaxt', 'field_name': '仓库地址', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldHOuUlSv', 'field_name': '仓库备注', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}], 'page_token': 'fldHOuUlSv', 'total': 3}, 'msg': 'success'}
+2025-09-28 15:09:05,141 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'fields': {'仓库名': '1号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vmiK35eO', 'record_id': 'recuz4vmiK35eO'}, {'fields': {'仓库名': '2号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vEieIkRT', 'record_id': 'recuz4vEieIkRT'}, {'fields': {'仓库名': '3号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vH2RnDwv', 'record_id': 'recuz4vH2RnDwv'}], 'total': 3}, 'msg': 'success'}
+2025-09-28 15:09:05,562 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4302, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:09:06,395 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'fields': {'商品ID': 'YJ0001', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 350ml ]', '商品备注': '350蓝带', '商品规格': '350ml'}, 'id': 'recuCKXw9Rx537', 'record_id': 'recuCKXw9Rx537'}, {'fields': {'商品ID': 'YJ0002', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 500ml ]', '商品备注': '500蓝带', '商品规格': '500ml'}, 'id': 'recuCKXwswCpp7', 'record_id': 'recuCKXwswCpp7'}, {'fields': {'商品ID': 'YJ0003', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 700ml ]', '商品备注': '700蓝带', '商品规格': '700ml'}, 'id': 'recuCKXyVjEk7A', 'record_id': 'recuCKXyVjEk7A'}, {'fields': {'商品ID': 'YJ0004', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 1000ml ]', '商品备注': '公斤蓝带', '商品规格': '1000ml'}, 'id': 'recuCKXyVjLBzk', 'record_id': 'recuCKXyVjLBzk'}, {'fields': {'商品ID': 'YJ0005', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 350ml ]', '商品备注': '小名仕', '商品规格': '350ml'}, 'id': 'recuCKXyVj8gAq', 'record_id': 'recuCKXyVj8gAq'}, {'fields': {'商品ID': 'YJ0006', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 500ml ]', '商品备注': '500名仕', '商品规格': '500ml'}, 'id': 'recuCKXyVjvA13', 'record_id': 'recuCKXyVjvA13'}, {'fields': {'商品ID': 'YJ0007', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 700ml ]', '商品备注': '700名仕', '商品规格': '700ml'}, 'id': 'recuCKXyVjbAzD', 'record_id': 'recuCKXyVjbAzD'}, {'fields': {'商品ID': 'YJ0008', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 1000ml ]', '商品备注': '公斤名仕', '商品规格': '1000ml'}, 'id': 'recuCKXyVjta3z', 'record_id': 'recuCKXyVjta3z'}, {'fields': {'商品ID': 'YJ0009', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 350ml ]', '商品备注': '小角马', '商品规格': '350ml'}, 'id': 'recuCKXyVj5pKk', 'record_id': 'recuCKXyVj5pKk'}, {'fields': {'商品ID': 'YJ0010', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 500ml ]', '商品备注': '500角', '商品规格': '500ml'}, 'id': 'recuCKXyVj7TZw', 'record_id': 'recuCKXyVj7TZw'}, {'fields': {'商品ID': 'YJ0011', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 500ml｜城市版 ]', '商品备注': '城市角', '商品规格': '500ml｜城市版'}, 'id': 'recuCKXyVjjJv0', 'record_id': 'recuCKXyVjjJv0'}, {'fields': {'商品ID': 'YJ0012', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 700ml ]', '商品备注': '700角', '商品规格': '700ml'}, 'id': 'recuCKXyVjxK1r', 'record_id': 'recuCKXyVjxK1r'}, {'fields': {'商品ID': 'YJ0013', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 1000ml ]', '商品备注': '公斤角', '商品规格': '1000ml'}, 'id': 'recuCKXyVjokBs', 'record_id': 'recuCKXyVjokBs'}, {'fields': {'商品ID': 'YJ0014', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 30ml ]', '商品备注': '30ml人头马', '商品规格': '30ml'}, 'id': 'recuCKXyVj2dSP', 'record_id': 'recuCKXyVj2dSP'}, {'fields': {'商品ID': 'YJ0015', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 200ml ]', '商品备注': '200ml人头马', '商品规格': '200ml'}, 'id': 'recuCKXyVjdLv4', 'record_id': 'recuCKXyVjdLv4'}, {'fields': {'商品ID': 'YJ0016', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 350ml ]', '商品备注': '350ml人头马', '商品规格': '350ml'}, 'id': 'recuCKXyVjEmQH', 'record_id': 'recuCKXyVjEmQH'}, {'fields': {'商品ID': 'YJ0017', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 500ml ]', '商品备注': '500ml人头马', '商品规格': '500ml'}, 'id': 'recuCKXyVjEk1c', 'record_id': 'recuCKXyVjEk1c'}, {'fields': {'商品ID': 'YJ0018', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马xo[ 50ml ]', '商品备注': '小太阳花', '商品规格': '50ml'}, 'id': 'recuCKXyVjPKTf', 'record_id': 'recuCKXyVjPKTf'}, {'fields': {'商品ID': 'YJ0019', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马xo[ 700ml ]', '商品备注': '700人头马xo', '商品规格': '700ml'}, 'id': 'recuCKXyVjmweS', 'record_id': 'recuCKXyVjmweS'}, {'fields': {'商品ID': 'YJ0020', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 700ml ]', '商品备注': '老轩V', '商品规格': '700ml'}, 'id': 'recuCKXyVjSNq4', 'record_id': 'recuCKXyVjSNq4'}, {'fields': {'商品ID': 'YJ0021', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 700ml ｜红色新版 ]', '商品备注': '红轩V', '商品规格': '700ml ｜红色新版'}, 'id': 'recuCKXyVjcC8o', 'record_id': 'recuCKXyVjcC8o'}, {'fields': {'商品ID': 'YJ0022', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 1000ml ]', '商品备注': '公斤轩V', '商品规格': '1000ml'}, 'id': 'recuCKXyVjNI3s', 'record_id': 'recuCKXyVjNI3s'}, {'fields': {'商品ID': 'YJ0023', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗xo[ 700ml ]', '商品备注': '700轩O', '商品规格': '700ml'}, 'id': 'recuCKXyVjN3yS', 'record_id': 'recuCKXyVjN3yS'}, {'fields': {'商品ID': 'BJ0001', '商品分类': '白酒', '商品单位': '支', '商品名称': '五粮液八代[ 500ml｜单支 ]', '商品备注': '普五', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjNfxe', 'record_id': 'recuCKXyVjNfxe'}, {'fields': {'商品ID': 'BJ0002', '商品分类': '白酒', '商品单位': '箱', '商品名称': '五粮液八代[ 500ml*6｜整箱 ]', '商品备注': '五粮液原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjWFqi', 'record_id': 'recuCKXyVjWFqi'}, {'fields': {'商品ID': 'BJ0003', '商品分类': '白酒', '商品单位': '支', '商品名称': '五粮液七代[ 500ml｜单支 ]', '商品备注': '散五粮液七代', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjuCFY', 'record_id': 'recuCKXyVjuCFY'}, {'fields': {'商品ID': 'BJ0004', '商品分类': '白酒', '商品单位': '箱', '商品名称': '五粮液七代[ 500ml*6｜整箱 ]', '商品备注': '五粮液七代原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjgKTy', 'record_id': 'recuCKXyVjgKTy'}, {'fields': {'商品ID': 'BJ0005', '商品分类': '白酒', '商品单位': '支', '商品名称': '国窖1573[ 500ml｜单支 ]', '商品备注': '1573', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjuI0V', 'record_id': 'recuCKXyVjuI0V'}, {'fields': {'商品ID': 'BJ0006', '商品分类': '白酒', '商品单位': '箱', '商品名称': '国窖1573[ 500ml*6｜整箱 ]', '商品备注': '1573原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjhRJ5', 'record_id': 'recuCKXyVjhRJ5'}, {'fields': {'商品ID': 'BJ0007', '商品分类': '白酒', '商品单位': '支', '商品名称': '剑南春[ 500ml｜单支 ]', '商品备注': '剑南春', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjVvzz', 'record_id': 'recuCKXyVjVvzz'}, {'fields': {'商品ID': 'BJ0008', '商品分类': '白酒', '商品单位': '箱', '商品名称': '剑南春[ 500ml*6｜整箱 ]', '商品备注': '剑南春原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVj3Miv', 'record_id': 'recuCKXyVj3Miv'}, {'fields': {'商品ID': 'BJ0009', '商品分类': '白酒', '商品单位': '支', '商品名称': '43度茅台[ 500ml｜单支 ]', '商品备注': '散43', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjdo24', 'record_id': 'recuCKXyVjdo24'}, {'fields': {'商品ID': 'BJ0010', '商品分类': '白酒', '商品单位': '箱', '商品名称': '43度茅台[ 500ml*6｜整箱 ]', '商品备注': '43原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjoLik', 'record_id': 'recuCKXyVjoLik'}, {'fields': {'商品ID': 'BJ0011', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 100ml ]', '商品备注': '100ml茅台', '商品规格': '100ml'}, 'id': 'recuCKXyVjlfSw', 'record_id': 'recuCKXyVjlfSw'}, {'fields': {'商品ID': 'BJ0012', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 200ml ]', '商品备注': '200ml茅台', '商品规格': '200ml'}, 'id': 'recuCKXyVjNICh', 'record_id': 'recuCKXyVjNICh'}, {'fields': {'商品ID': 'BJ0013', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 375ml ]', '商品备注': '375茅台', '商品规格': '375ml'}, 'id': 'recuCKXyVjFhxN', 'record_id': 'recuCKXyVjFhxN'}, {'fields': {'商品ID': 'BJ0014', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 500ml ]', '商品备注': '散飞', '商品规格': '500ml'}, 'id': 'recuCKXyVjdPvm', 'record_id': 'recuCKXyVjdPvm'}, {'fields': {'商品ID': 'BJ0015', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 1000ml ]', '商品备注': '公斤茅台', '商品规格': '1000ml'}, 'id': 'recuCKXyVj182X', 'record_id': 'recuCKXyVj182X'}, {'fields': {'商品ID': 'BJ0016', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜年份酒（2019-2022） ]', '商品备注': '茅台年份酒', '商品规格': '500ml｜年份酒（2019-2022）'}, 'id': 'recuCKXyVjSFc7', 'record_id': 'recuCKXyVjSFc7'}, {'fields': {'商品ID': 'BJ0017', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜精品系列 ]', '商品备注': '精品', '商品规格': '500ml｜精品系列'}, 'id': 'recuCKXyVj2o47', 'record_id': 'recuCKXyVj2o47'}, {'fields': {'商品ID': 'BJ0018', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 100ml｜节气酒 ]', '商品备注': '小节气', '商品规格': '100ml｜节气酒'}, 'id': 'recuCKXyVjZFOi', 'record_id': 'recuCKXyVjZFOi'}, {'fields': {'商品ID': 'BJ0019', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜节气酒 ]', '商品备注': '节气酒', '商品规格': '500ml｜节气酒'}, 'id': 'recuCKXyVjJeNR', 'record_id': 'recuCKXyVjJeNR'}, {'fields': {'商品ID': 'BJ0020', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜庚子鼠 ]', '商品备注': '鼠茅', '商品规格': '500ml｜生肖｜庚子鼠'}, 'id': 'recuCKXyVjc3xU', 'record_id': 'recuCKXyVjc3xU'}, {'fields': {'商品ID': 'BJ0021', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜辛丑牛 ]', '商品备注': '牛茅', '商品规格': '500ml｜生肖｜辛丑牛'}, 'id': 'recuCKXyVjgKIi', 'record_id': 'recuCKXyVjgKIi'}, {'fields': {'商品ID': 'BJ0022', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜壬寅虎 ]', '商品备注': '虎茅', '商品规格': '500ml｜生肖｜壬寅虎'}, 'id': 'recuCKXyVjuWfk', 'record_id': 'recuCKXyVjuWfk'}, {'fields': {'商品ID': 'BJ0023', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜癸卯兔 ]', '商品备注': '兔茅', '商品规格': '500ml｜生肖｜癸卯兔'}, 'id': 'recuCKXyVjm8yl', 'record_id': 'recuCKXyVjm8yl'}, {'fields': {'商品ID': 'BJ0024', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜甲辰龙 ]', '商品备注': '龙茅', '商品规格': '500ml｜生肖｜甲辰龙'}, 'id': 'recuCKXyVjUlzV', 'record_id': 'recuCKXyVjUlzV'}, {'fields': {'商品ID': 'BJ0025', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜己亥猪 ]', '商品备注': '猪茅', '商品规格': '500ml｜生肖｜己亥猪'}, 'id': 'recuCKXyVjFCca', 'record_id': 'recuCKXyVjFCca'}, {'fields': {'商品ID': 'BJ0026', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜戊戌狗 ]', '商品备注': '狗茅', '商品规格': '500ml｜生肖｜戊戌狗'}, 'id': 'recuCKXyVj8hty', 'record_id': 'recuCKXyVj8hty'}, {'fields': {'商品ID': 'BJ0027', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜丁酉鸡 ]', '商品备注': '鸡茅', '商品规格': '500ml｜生肖｜丁酉鸡'}, 'id': 'recuCKXyVjYhgp', 'record_id': 'recuCKXyVjYhgp'}, {'fields': {'商品ID': 'BJ0028', '商品分类': '白酒', '商品单位': '支', '商品名称': '茅台1935[ 500ml｜单支 ]', '商品备注': '1935', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVj4clY', 'record_id': 'recuCKXyVj4clY'}, {'fields': {'商品ID': 'BJ0029', '商品分类': '白酒', '商品单位': '箱', '商品名称': '茅台1935[ 500ml*6｜整箱 ]', '商品备注': '1935原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjyHv0', 'record_id': 'recuCKXyVjyHv0'}, {'fields': {'商品ID': 'SM0001', '商品分类': '数码', '商品单位': '台', '商品名称': 'airpods二代', '商品规格': '-'}, 'id': 'recuCKXyVj83dw', 'record_id': 'recuCKXyVj83dw'}, {'fields': {'商品ID': 'SM0002', '商品分类': '数码', '商品单位': '台', '商品名称': 'ipad2025版[ 256G｜银色 ]', '商品规格': '256G｜银色'}, 'id': 'recuCKXyVjpZrI', 'record_id': 'recuCKXyVjpZrI'}, {'fields': {'商品ID': 'SM0003', '商品分类': '数码', '商品单位': '台', '商品名称': 'ipad air[ 256G｜银色 ]', '商品规格': '256G｜银色'}, 'id': 'recuCKXyVjPseQ', 'record_id': 'recuCKXyVjPseQ'}, {'fields': {'商品ID': 'SM0004', '商品分类': '数码', '商品单位': '台', '商品名称': 'iphone16[ 128G｜深空灰 ]', '商品规格': '128G｜深空灰'}, 'id': 'recuCKXyVjKq0j', 'record_id': 'recuCKXyVjKq0j'}, {'fields': {'商品ID': 'NF0001', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿2段[ 400g ]', '商品备注': '小美素2段', '商品规格': '400g'}, 'id': 'recuCKXyVjffl2', 'record_id': 'recuCKXyVjffl2'}, {'fields': {'商品ID': 'NF0002', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿2段[ 800g ]', '商品备注': '美素2段', '商品规格': '800g'}, 'id': 'recuCKXyVjky18', 'record_id': 'recuCKXyVjky18'}, {'fields': {'商品ID': 'NF0003', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿3段[ 800g ]', '商品备注': '美素3段', '商品规格': '800g'}, 'id': 'recuCKXyVjEYiz', 'record_id': 'recuCKXyVjEYiz'}], 'total': 59}, 'msg': 'success'}
+2025-09-28 15:09:06,773 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4301, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:09:07,405 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fldXS7VMAl', 'field_name': '商品名称', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldGuQDKnG', 'field_name': '仓库名', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldEXo039o', 'field_name': '商品ID', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldJjmf5Qt', 'field_name': '当前库存', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldibUl2Es', 'field_name': '入库单价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldjoEnUge', 'field_name': '累计入库数量', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldFyVEgxv', 'field_name': '入库总价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldFtOWmVG', 'field_name': '累计出库数量', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldOBfAabY', 'field_name': '出库总价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldzXmfvxJ', 'field_name': '库存总价', 'is_primary': False, 'property': {'formatter': '0.0', 'formula_expression': 'bitable::$table[tblOgqDaDx4DW00C].$field[fldJjmf5Qt]*bitable::$table[tblOgqDaDx4DW00C].$field[fldibUl2Es]', 'type': {'data_type': 2, 'ui_property': {'formatter': '0.0'}, 'ui_type': 'Number'}}, 'type': 20, 'ui_type': 'Formula'}, {'field_id': 'fldjHtUu0L', 'field_name': '最后出库时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}, {'field_id': 'fldKLBmkze', 'field_name': '最后入库时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}, {'field_id': 'fldz0ofkpR', 'field_name': '最后更新时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}], 'page_token': 'fldz0ofkpR', 'total': 13}, 'msg': 'success'}
+2025-09-28 15:09:07,811 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4300, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:09:08,416 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fld1BT7hO4', 'field_name': '仓库名', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldNrZUaxt', 'field_name': '仓库地址', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldHOuUlSv', 'field_name': '仓库备注', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}], 'page_token': 'fldHOuUlSv', 'total': 3}, 'msg': 'success'}
+2025-09-28 15:09:08,423 - src.main_app - INFO - Message processor service started
+2025-09-28 15:09:08,426 - message_processor - INFO - Starting message processing loop
+2025-09-28 15:09:08,436 - src.main_app - INFO - Health monitor service started
+2025-09-28 15:09:08,437 - health_monitor - INFO - Starting health monitoring
+2025-09-28 15:09:08,441 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:08,444 - health_monitor - INFO - Health monitor web server started on port 8080
+2025-09-28 15:09:08,445 - src.main_app - INFO - Health web server service started
+2025-09-28 15:09:13,450 - src.main_app - WARNING - Restarting service 'message_store' (attempt 1)
+2025-09-28 15:09:13,451 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:09:13,452 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:09:13,453 - src.main_app - INFO - Message store service started
+2025-09-28 15:09:13,454 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:13,456 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:13,459 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:23,460 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:28,450 - src.main_app - WARNING - Restarting service 'message_store' (attempt 2)
+2025-09-28 15:09:28,453 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:09:28,457 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:09:28,459 - src.main_app - INFO - Message store service started
+2025-09-28 15:09:28,462 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:28,467 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:28,474 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:38,462 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:43,483 - src.main_app - WARNING - Restarting service 'message_store' (attempt 3)
+2025-09-28 15:09:43,484 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:09:43,485 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:09:43,486 - src.main_app - INFO - Message store service started
+2025-09-28 15:09:43,486 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:43,488 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:43,490 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:53,491 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:58,475 - src.main_app - ERROR - Service 'message_store' exceeded max restart attempts (3)
+2025-09-28 15:10:08,489 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:12:08,047 - src.main_app - INFO - === Inventory Management System Starting ===
+2025-09-28 15:12:08,047 - src.main_app - INFO - Loading configuration...
+2025-09-28 15:12:08,047 - config_validator - INFO - Loaded environment variables from D:\git\erniu\inventory_management\.env
+2025-09-28 15:12:08,054 - config_validator - INFO - Configuration group 'feishu' validated successfully
+2025-09-28 15:12:08,054 - config_validator - INFO - Configuration group 'bitable' validated successfully
+2025-09-28 15:12:08,054 - config_validator - INFO - Configuration group 'deepseek' validated successfully
+2025-09-28 15:12:08,055 - config_validator - INFO - Configuration group 'app' validated successfully
+2025-09-28 15:12:08,056 - config_validator - INFO - All configuration validated successfully
+2025-09-28 15:12:08,056 - src.main_app - INFO - Configuration loaded and validated successfully
+2025-09-28 15:12:08,056 - src.main_app - INFO - Initializing message queue in messages...
+2025-09-28 15:12:08,057 - message_queue - INFO - Loaded 0 pending messages
+2025-09-28 15:12:08,058 - src.main_app - INFO - Initializing health monitor on port 8080...
+2025-09-28 15:12:08,058 - health_monitor - INFO - Registered health check: system
+2025-09-28 15:12:08,058 - health_monitor - INFO - Registered health check: message_queue
+2025-09-28 15:12:08,059 - src.main_app - INFO - Application initialized successfully
+2025-09-28 15:12:08,059 - src.main_app - INFO - Registered service: message_store
+2025-09-28 15:12:08,059 - src.main_app - INFO - Registered service: message_processor
+2025-09-28 15:12:08,060 - src.main_app - INFO - Registered service: health_monitor
+2025-09-28 15:12:08,061 - src.main_app - INFO - Registered service: health_web_server
+2025-09-28 15:12:08,061 - src.main_app - INFO - Registered service: service_monitor
+2025-09-28 15:12:08,061 - src.main_app - INFO - All services registered successfully
+2025-09-28 15:12:08,061 - src.main_app - INFO - Starting Inventory Management Application...
+2025-09-28 15:12:08,061 - src.main_app - INFO - Starting all services...
+2025-09-28 15:12:08,062 - src.main_app - INFO - Started service: message_store
+2025-09-28 15:12:08,062 - src.main_app - INFO - Started service: message_processor
+2025-09-28 15:12:08,062 - src.main_app - INFO - Started service: health_monitor
+2025-09-28 15:12:08,063 - src.main_app - INFO - Started service: health_web_server
+2025-09-28 15:12:08,063 - src.main_app - INFO - Started service: service_monitor
+2025-09-28 15:12:08,064 - src.main_app - INFO - Started 5 services
+2025-09-28 15:12:08,064 - src.main_app - INFO - Application started successfully
+2025-09-28 15:12:08,064 - src.main_app - INFO - Press Ctrl+C to stop the application
+2025-09-28 15:12:08,070 - src.main_app - INFO - Message store service started
+2025-09-28 15:12:08,070 - async_message_store - INFO - Starting Feishu bot in dedicated thread
+2025-09-28 15:12:08,074 - message_processor - INFO - MessageProcessor initialized with app_id: cli_a7fe5e4e57b8500c
+2025-09-28 15:12:08,079 - message_store_bot - INFO - 消息存储目录: D:\git\erniu\inventory_management\messages
+2025-09-28 15:12:08,573 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4119, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:12:08,846 - Lark - INFO - connected to wss://msg-frontier.feishu.cn/ws/v2?fpid=493&aid=552564&device_id=7555034217153167362&access_key=132ac1ef621bd9fa429a79a5b5497a25&service_id=33554678&ticket=4f8c522c-9de8-490b-8322-123ae8f5a93d [conn_id=7555034217153167362]
+2025-09-28 15:12:08,847 - Lark - DEBUG - ping success [conn_id=7555034217153167362]
+2025-09-28 15:12:08,891 - Lark - DEBUG - receive pong [conn_id=7555034217153167362]
+2025-09-28 15:12:09,199 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fld1BT7hO4', 'field_name': '仓库名', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldNrZUaxt', 'field_name': '仓库地址', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldHOuUlSv', 'field_name': '仓库备注', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}], 'page_token': 'fldHOuUlSv', 'total': 3}, 'msg': 'success'}
+2025-09-28 15:12:10,055 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'fields': {'仓库名': '1号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vmiK35eO', 'record_id': 'recuz4vmiK35eO'}, {'fields': {'仓库名': '2号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vEieIkRT', 'record_id': 'recuz4vEieIkRT'}, {'fields': {'仓库名': '3号仓', '仓库地址': '广州荔湾区', '仓库备注': '402'}, 'id': 'recuz4vH2RnDwv', 'record_id': 'recuz4vH2RnDwv'}], 'total': 3}, 'msg': 'success'}
+2025-09-28 15:12:10,472 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4117, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:12:11,226 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'fields': {'商品ID': 'YJ0001', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 350ml ]', '商品备注': '350蓝带', '商品规格': '350ml'}, 'id': 'recuCKXw9Rx537', 'record_id': 'recuCKXw9Rx537'}, {'fields': {'商品ID': 'YJ0002', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 500ml ]', '商品备注': '500蓝带', '商品规格': '500ml'}, 'id': 'recuCKXwswCpp7', 'record_id': 'recuCKXwswCpp7'}, {'fields': {'商品ID': 'YJ0003', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 700ml ]', '商品备注': '700蓝带', '商品规格': '700ml'}, 'id': 'recuCKXyVjEk7A', 'record_id': 'recuCKXyVjEk7A'}, {'fields': {'商品ID': 'YJ0004', '商品分类': '洋酒', '商品单位': '支', '商品名称': '蓝带[ 1000ml ]', '商品备注': '公斤蓝带', '商品规格': '1000ml'}, 'id': 'recuCKXyVjLBzk', 'record_id': 'recuCKXyVjLBzk'}, {'fields': {'商品ID': 'YJ0005', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 350ml ]', '商品备注': '小名仕', '商品规格': '350ml'}, 'id': 'recuCKXyVj8gAq', 'record_id': 'recuCKXyVj8gAq'}, {'fields': {'商品ID': 'YJ0006', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 500ml ]', '商品备注': '500名仕', '商品规格': '500ml'}, 'id': 'recuCKXyVjvA13', 'record_id': 'recuCKXyVjvA13'}, {'fields': {'商品ID': 'YJ0007', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 700ml ]', '商品备注': '700名仕', '商品规格': '700ml'}, 'id': 'recuCKXyVjbAzD', 'record_id': 'recuCKXyVjbAzD'}, {'fields': {'商品ID': 'YJ0008', '商品分类': '洋酒', '商品单位': '支', '商品名称': '名仕[ 1000ml ]', '商品备注': '公斤名仕', '商品规格': '1000ml'}, 'id': 'recuCKXyVjta3z', 'record_id': 'recuCKXyVjta3z'}, {'fields': {'商品ID': 'YJ0009', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 350ml ]', '商品备注': '小角马', '商品规格': '350ml'}, 'id': 'recuCKXyVj5pKk', 'record_id': 'recuCKXyVj5pKk'}, {'fields': {'商品ID': 'YJ0010', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 500ml ]', '商品备注': '500角', '商品规格': '500ml'}, 'id': 'recuCKXyVj7TZw', 'record_id': 'recuCKXyVj7TZw'}, {'fields': {'商品ID': 'YJ0011', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 500ml｜城市版 ]', '商品备注': '城市角', '商品规格': '500ml｜城市版'}, 'id': 'recuCKXyVjjJv0', 'record_id': 'recuCKXyVjjJv0'}, {'fields': {'商品ID': 'YJ0012', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 700ml ]', '商品备注': '700角', '商品规格': '700ml'}, 'id': 'recuCKXyVjxK1r', 'record_id': 'recuCKXyVjxK1r'}, {'fields': {'商品ID': 'YJ0013', '商品分类': '洋酒', '商品单位': '支', '商品名称': '角马[ 1000ml ]', '商品备注': '公斤角', '商品规格': '1000ml'}, 'id': 'recuCKXyVjokBs', 'record_id': 'recuCKXyVjokBs'}, {'fields': {'商品ID': 'YJ0014', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 30ml ]', '商品备注': '30ml人头马', '商品规格': '30ml'}, 'id': 'recuCKXyVj2dSP', 'record_id': 'recuCKXyVj2dSP'}, {'fields': {'商品ID': 'YJ0015', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 200ml ]', '商品备注': '200ml人头马', '商品规格': '200ml'}, 'id': 'recuCKXyVjdLv4', 'record_id': 'recuCKXyVjdLv4'}, {'fields': {'商品ID': 'YJ0016', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 350ml ]', '商品备注': '350ml人头马', '商品规格': '350ml'}, 'id': 'recuCKXyVjEmQH', 'record_id': 'recuCKXyVjEmQH'}, {'fields': {'商品ID': 'YJ0017', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马vsop[ 500ml ]', '商品备注': '500ml人头马', '商品规格': '500ml'}, 'id': 'recuCKXyVjEk1c', 'record_id': 'recuCKXyVjEk1c'}, {'fields': {'商品ID': 'YJ0018', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马xo[ 50ml ]', '商品备注': '小太阳花', '商品规格': '50ml'}, 'id': 'recuCKXyVjPKTf', 'record_id': 'recuCKXyVjPKTf'}, {'fields': {'商品ID': 'YJ0019', '商品分类': '洋酒', '商品单位': '支', '商品名称': '人头马xo[ 700ml ]', '商品备注': '700人头马xo', '商品规格': '700ml'}, 'id': 'recuCKXyVjmweS', 'record_id': 'recuCKXyVjmweS'}, {'fields': {'商品ID': 'YJ0020', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 700ml ]', '商品备注': '老轩V', '商品规格': '700ml'}, 'id': 'recuCKXyVjSNq4', 'record_id': 'recuCKXyVjSNq4'}, {'fields': {'商品ID': 'YJ0021', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 700ml ｜红色新版 ]', '商品备注': '红轩V', '商品规格': '700ml ｜红色新版'}, 'id': 'recuCKXyVjcC8o', 'record_id': 'recuCKXyVjcC8o'}, {'fields': {'商品ID': 'YJ0022', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗vsop[ 1000ml ]', '商品备注': '公斤轩V', '商品规格': '1000ml'}, 'id': 'recuCKXyVjNI3s', 'record_id': 'recuCKXyVjNI3s'}, {'fields': {'商品ID': 'YJ0023', '商品分类': '洋酒', '商品单位': '支', '商品名称': '轩尼诗xo[ 700ml ]', '商品备注': '700轩O', '商品规格': '700ml'}, 'id': 'recuCKXyVjN3yS', 'record_id': 'recuCKXyVjN3yS'}, {'fields': {'商品ID': 'BJ0001', '商品分类': '白酒', '商品单位': '支', '商品名称': '五粮液八代[ 500ml｜单支 ]', '商品备注': '普五', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjNfxe', 'record_id': 'recuCKXyVjNfxe'}, {'fields': {'商品ID': 'BJ0002', '商品分类': '白酒', '商品单位': '箱', '商品名称': '五粮液八代[ 500ml*6｜整箱 ]', '商品备注': '五粮液原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjWFqi', 'record_id': 'recuCKXyVjWFqi'}, {'fields': {'商品ID': 'BJ0003', '商品分类': '白酒', '商品单位': '支', '商品名称': '五粮液七代[ 500ml｜单支 ]', '商品备注': '散五粮液七代', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjuCFY', 'record_id': 'recuCKXyVjuCFY'}, {'fields': {'商品ID': 'BJ0004', '商品分类': '白酒', '商品单位': '箱', '商品名称': '五粮液七代[ 500ml*6｜整箱 ]', '商品备注': '五粮液七代原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjgKTy', 'record_id': 'recuCKXyVjgKTy'}, {'fields': {'商品ID': 'BJ0005', '商品分类': '白酒', '商品单位': '支', '商品名称': '国窖1573[ 500ml｜单支 ]', '商品备注': '1573', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjuI0V', 'record_id': 'recuCKXyVjuI0V'}, {'fields': {'商品ID': 'BJ0006', '商品分类': '白酒', '商品单位': '箱', '商品名称': '国窖1573[ 500ml*6｜整箱 ]', '商品备注': '1573原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjhRJ5', 'record_id': 'recuCKXyVjhRJ5'}, {'fields': {'商品ID': 'BJ0007', '商品分类': '白酒', '商品单位': '支', '商品名称': '剑南春[ 500ml｜单支 ]', '商品备注': '剑南春', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjVvzz', 'record_id': 'recuCKXyVjVvzz'}, {'fields': {'商品ID': 'BJ0008', '商品分类': '白酒', '商品单位': '箱', '商品名称': '剑南春[ 500ml*6｜整箱 ]', '商品备注': '剑南春原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVj3Miv', 'record_id': 'recuCKXyVj3Miv'}, {'fields': {'商品ID': 'BJ0009', '商品分类': '白酒', '商品单位': '支', '商品名称': '43度茅台[ 500ml｜单支 ]', '商品备注': '散43', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVjdo24', 'record_id': 'recuCKXyVjdo24'}, {'fields': {'商品ID': 'BJ0010', '商品分类': '白酒', '商品单位': '箱', '商品名称': '43度茅台[ 500ml*6｜整箱 ]', '商品备注': '43原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjoLik', 'record_id': 'recuCKXyVjoLik'}, {'fields': {'商品ID': 'BJ0011', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 100ml ]', '商品备注': '100ml茅台', '商品规格': '100ml'}, 'id': 'recuCKXyVjlfSw', 'record_id': 'recuCKXyVjlfSw'}, {'fields': {'商品ID': 'BJ0012', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 200ml ]', '商品备注': '200ml茅台', '商品规格': '200ml'}, 'id': 'recuCKXyVjNICh', 'record_id': 'recuCKXyVjNICh'}, {'fields': {'商品ID': 'BJ0013', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 375ml ]', '商品备注': '375茅台', '商品规格': '375ml'}, 'id': 'recuCKXyVjFhxN', 'record_id': 'recuCKXyVjFhxN'}, {'fields': {'商品ID': 'BJ0014', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 500ml ]', '商品备注': '散飞', '商品规格': '500ml'}, 'id': 'recuCKXyVjdPvm', 'record_id': 'recuCKXyVjdPvm'}, {'fields': {'商品ID': 'BJ0015', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台[ 1000ml ]', '商品备注': '公斤茅台', '商品规格': '1000ml'}, 'id': 'recuCKXyVj182X', 'record_id': 'recuCKXyVj182X'}, {'fields': {'商品ID': 'BJ0016', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜年份酒（2019-2022） ]', '商品备注': '茅台年份酒', '商品规格': '500ml｜年份酒（2019-2022）'}, 'id': 'recuCKXyVjSFc7', 'record_id': 'recuCKXyVjSFc7'}, {'fields': {'商品ID': 'BJ0017', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜精品系列 ]', '商品备注': '精品', '商品规格': '500ml｜精品系列'}, 'id': 'recuCKXyVj2o47', 'record_id': 'recuCKXyVj2o47'}, {'fields': {'商品ID': 'BJ0018', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 100ml｜节气酒 ]', '商品备注': '小节气', '商品规格': '100ml｜节气酒'}, 'id': 'recuCKXyVjZFOi', 'record_id': 'recuCKXyVjZFOi'}, {'fields': {'商品ID': 'BJ0019', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜节气酒 ]', '商品备注': '节气酒', '商品规格': '500ml｜节气酒'}, 'id': 'recuCKXyVjJeNR', 'record_id': 'recuCKXyVjJeNR'}, {'fields': {'商品ID': 'BJ0020', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜庚子鼠 ]', '商品备注': '鼠茅', '商品规格': '500ml｜生肖｜庚子鼠'}, 'id': 'recuCKXyVjc3xU', 'record_id': 'recuCKXyVjc3xU'}, {'fields': {'商品ID': 'BJ0021', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜辛丑牛 ]', '商品备注': '牛茅', '商品规格': '500ml｜生肖｜辛丑牛'}, 'id': 'recuCKXyVjgKIi', 'record_id': 'recuCKXyVjgKIi'}, {'fields': {'商品ID': 'BJ0022', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜壬寅虎 ]', '商品备注': '虎茅', '商品规格': '500ml｜生肖｜壬寅虎'}, 'id': 'recuCKXyVjuWfk', 'record_id': 'recuCKXyVjuWfk'}, {'fields': {'商品ID': 'BJ0023', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜癸卯兔 ]', '商品备注': '兔茅', '商品规格': '500ml｜生肖｜癸卯兔'}, 'id': 'recuCKXyVjm8yl', 'record_id': 'recuCKXyVjm8yl'}, {'fields': {'商品ID': 'BJ0024', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜甲辰龙 ]', '商品备注': '龙茅', '商品规格': '500ml｜生肖｜甲辰龙'}, 'id': 'recuCKXyVjUlzV', 'record_id': 'recuCKXyVjUlzV'}, {'fields': {'商品ID': 'BJ0025', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜己亥猪 ]', '商品备注': '猪茅', '商品规格': '500ml｜生肖｜己亥猪'}, 'id': 'recuCKXyVjFCca', 'record_id': 'recuCKXyVjFCca'}, {'fields': {'商品ID': 'BJ0026', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜戊戌狗 ]', '商品备注': '狗茅', '商品规格': '500ml｜生肖｜戊戌狗'}, 'id': 'recuCKXyVj8hty', 'record_id': 'recuCKXyVj8hty'}, {'fields': {'商品ID': 'BJ0027', '商品分类': '白酒', '商品单位': '支', '商品名称': '53度飞天茅台（系列酒）[ 500ml｜生肖｜丁酉鸡 ]', '商品备注': '鸡茅', '商品规格': '500ml｜生肖｜丁酉鸡'}, 'id': 'recuCKXyVjYhgp', 'record_id': 'recuCKXyVjYhgp'}, {'fields': {'商品ID': 'BJ0028', '商品分类': '白酒', '商品单位': '支', '商品名称': '茅台1935[ 500ml｜单支 ]', '商品备注': '1935', '商品规格': '500ml｜单支'}, 'id': 'recuCKXyVj4clY', 'record_id': 'recuCKXyVj4clY'}, {'fields': {'商品ID': 'BJ0029', '商品分类': '白酒', '商品单位': '箱', '商品名称': '茅台1935[ 500ml*6｜整箱 ]', '商品备注': '1935原件', '商品规格': '500ml*6｜整箱'}, 'id': 'recuCKXyVjyHv0', 'record_id': 'recuCKXyVjyHv0'}, {'fields': {'商品ID': 'SM0001', '商品分类': '数码', '商品单位': '台', '商品名称': 'airpods二代', '商品规格': '-'}, 'id': 'recuCKXyVj83dw', 'record_id': 'recuCKXyVj83dw'}, {'fields': {'商品ID': 'SM0002', '商品分类': '数码', '商品单位': '台', '商品名称': 'ipad2025版[ 256G｜银色 ]', '商品规格': '256G｜银色'}, 'id': 'recuCKXyVjpZrI', 'record_id': 'recuCKXyVjpZrI'}, {'fields': {'商品ID': 'SM0003', '商品分类': '数码', '商品单位': '台', '商品名称': 'ipad air[ 256G｜银色 ]', '商品规格': '256G｜银色'}, 'id': 'recuCKXyVjPseQ', 'record_id': 'recuCKXyVjPseQ'}, {'fields': {'商品ID': 'SM0004', '商品分类': '数码', '商品单位': '台', '商品名称': 'iphone16[ 128G｜深空灰 ]', '商品规格': '128G｜深空灰'}, 'id': 'recuCKXyVjKq0j', 'record_id': 'recuCKXyVjKq0j'}, {'fields': {'商品ID': 'NF0001', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿2段[ 400g ]', '商品备注': '小美素2段', '商品规格': '400g'}, 'id': 'recuCKXyVjffl2', 'record_id': 'recuCKXyVjffl2'}, {'fields': {'商品ID': 'NF0002', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿2段[ 800g ]', '商品备注': '美素2段', '商品规格': '800g'}, 'id': 'recuCKXyVjky18', 'record_id': 'recuCKXyVjky18'}, {'fields': {'商品ID': 'NF0003', '商品分类': '奶粉', '商品单位': '罐', '商品名称': '皇家美素佳儿3段[ 800g ]', '商品备注': '美素3段', '商品规格': '800g'}, 'id': 'recuCKXyVjEYiz', 'record_id': 'recuCKXyVjEYiz'}], 'total': 59}, 'msg': 'success'}
+2025-09-28 15:12:11,658 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4116, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:12:12,270 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fldXS7VMAl', 'field_name': '商品名称', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldGuQDKnG', 'field_name': '仓库名', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldEXo039o', 'field_name': '商品ID', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldJjmf5Qt', 'field_name': '当前库存', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldibUl2Es', 'field_name': '入库单价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldjoEnUge', 'field_name': '累计入库数量', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldFyVEgxv', 'field_name': '入库总价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldFtOWmVG', 'field_name': '累计出库数量', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldOBfAabY', 'field_name': '出库总价', 'is_primary': False, 'property': {'formatter': '0.0'}, 'type': 2, 'ui_type': 'Number'}, {'field_id': 'fldzXmfvxJ', 'field_name': '库存总价', 'is_primary': False, 'property': {'formatter': '0.0', 'formula_expression': 'bitable::$table[tblOgqDaDx4DW00C].$field[fldJjmf5Qt]*bitable::$table[tblOgqDaDx4DW00C].$field[fldibUl2Es]', 'type': {'data_type': 2, 'ui_property': {'formatter': '0.0'}, 'ui_type': 'Number'}}, 'type': 20, 'ui_type': 'Formula'}, {'field_id': 'fldjHtUu0L', 'field_name': '最后出库时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}, {'field_id': 'fldKLBmkze', 'field_name': '最后入库时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}, {'field_id': 'fldz0ofkpR', 'field_name': '最后更新时间', 'is_primary': False, 'property': {'auto_fill': False, 'date_formatter': 'yyyy-MM-dd HH:mm'}, 'type': 5, 'ui_type': 'DateTime'}], 'page_token': 'fldz0ofkpR', 'total': 13}, 'msg': 'success'}
+2025-09-28 15:12:12,690 - feishu_sheet - INFO - Response: {'code': 0, 'expire': 4115, 'msg': 'ok', 'tenant_access_token': 't-g1049sekN2Q6A6IM3AVMH766A2B65CG5O2F2KG7L'}
+2025-09-28 15:12:13,230 - feishu_sheet - INFO - Response: {'code': 0, 'data': {'has_more': False, 'items': [{'field_id': 'fld1BT7hO4', 'field_name': '仓库名', 'is_primary': True, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldNrZUaxt', 'field_name': '仓库地址', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}, {'field_id': 'fldHOuUlSv', 'field_name': '仓库备注', 'is_primary': False, 'property': None, 'type': 1, 'ui_type': 'Text'}], 'page_token': 'fldHOuUlSv', 'total': 3}, 'msg': 'success'}
+2025-09-28 15:12:13,233 - src.main_app - INFO - Message processor service started
+2025-09-28 15:12:13,234 - message_processor - INFO - Starting message processing loop
+2025-09-28 15:12:13,237 - src.main_app - INFO - Health monitor service started
+2025-09-28 15:12:13,238 - health_monitor - INFO - Starting health monitoring
+2025-09-28 15:12:13,240 - async_message_store - INFO - Feishu bot started successfully in async mode
+2025-09-28 15:12:13,242 - health_monitor - INFO - Health monitor web server started on port 8080
+2025-09-28 15:12:13,242 - src.main_app - INFO - Health web server service started
+2025-09-28 15:12:32,314 - aiohttp.access - INFO - 127.0.0.1 [28/Sep/2025:15:12:32 +0800] "GET /health HTTP/1.1" 200 1100 "-" "curl/7.85.0"

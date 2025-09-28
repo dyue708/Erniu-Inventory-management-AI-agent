@@ -1,0 +1,205 @@
+2025-09-28 15:06:57,140 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:06:57,141 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:06:57,149 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:02,765 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:07,775 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:07:07,776 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:07:07,777 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:17,764 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:22,774 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:07:22,775 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:07:22,777 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:32,782 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:37,799 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:07:37,801 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "D:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:07:37,805 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:07:47,813 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:07:52,803 - src.main_app - ERROR - Service 'message_store' exceeded max restart attempts (3)
+2025-09-28 15:08:02,829 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:08:07,837 - src.main_app - ERROR - Service 'message_store' exceeded max restart attempts (3)
+2025-09-28 15:09:03,243 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:03,244 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:03,248 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:08,441 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:13,454 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:13,456 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:13,459 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:23,460 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:28,462 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:28,467 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:28,474 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:38,462 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:43,486 - Lark - ERROR - connect failed, err: Cannot run the event loop while another loop is running
+2025-09-28 15:09:43,488 - message_store_bot - ERROR - 启动飞书机器人失败: Cannot run the event loop while another loop is running
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 114, in start
+    loop.run_until_complete(self._connect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "d:\git\erniu\inventory_management\src\message_store_bot.py", line 241, in start
+    self.client.start()
+  File "d:\git\erniu\inventory_management\venv\lib\site-packages\lark_oapi\ws\client.py", line 120, in start
+    loop.run_until_complete(self._disconnect())
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 625, in run_until_complete
+    self._check_running()
+  File "D:\ProgramData\Anaconda3\lib\asyncio\base_events.py", line 586, in _check_running
+    raise RuntimeError(
+RuntimeError: Cannot run the event loop while another loop is running
+2025-09-28 15:09:43,490 - src.main_app - ERROR - Message store service error: Cannot run the event loop while another loop is running
+2025-09-28 15:09:53,491 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
+2025-09-28 15:09:58,475 - src.main_app - ERROR - Service 'message_store' exceeded max restart attempts (3)
+2025-09-28 15:10:08,489 - src.main_app - ERROR - Service 'message_store' failed: Cannot run the event loop while another loop is running
